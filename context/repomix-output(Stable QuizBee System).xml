@@ -1,0 +1,3658 @@
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: .venv
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+instance/database.db
+main.py
+readme.md
+requirements.txt
+seed.py
+website/__init__.py
+website/auth.py
+website/models.py
+website/static/header.png
+website/static/JPCS LOGO VARIANT 1.png
+website/static/JPCS OLD.png
+website/static/JPCS.png
+website/static/JPCS2024_Group.png
+website/static/JPTABS.png
+website/templates/about.html
+website/templates/admin/admin_dashboard.html
+website/templates/admin/event_edit.html
+website/templates/admin/event_registration.html
+website/templates/admin/final_results.html
+website/templates/admin/register_user.html
+website/templates/admin/round_control.html
+website/templates/admin/round_setup.html
+website/templates/admin/school_registration.html
+website/templates/admin/tie_breaker.html
+website/templates/base.html
+website/templates/home.html
+website/templates/login.html
+website/templates/tabulator/scoring.html
+website/templates/tabulator/tabulator_dashboard.html
+website/templates/viewer/leaderboard.html
+website/views.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="readme.md">
+# 🏆 Quiz Bee Tabulation System  
+**Automated Tournament Logic Engine for Academic Competitions**
+
+A specialized, enterprise-grade tabulation system designed to handle complex academic competition rules, including Hybrid Scoring (Cumulative + Clean Slate), Recursive Tie-Breaking, and Real-time Leaderboards.  
+Built for the **Junior Philippine Computer Society – CSPC Chapter**.
+
+---
+
+## 🌟 Key Features
+
+### ⚙️ Advanced Scoring Engine
+- **Hybrid Logic:** Automatically switches between Cumulative Scoring (eliminations) and Back-to-Zero/Clean Slate (final round).  
+- **Flexible Configuration:** Supports strict "Cumulative" or simple "Per Round" modes.
+
+### ⚔️ Iterative & Recursive Tie-Breaking
+- **Smart Detection:** Detects ties at qualifying cutoffs (e.g., 3 schools tied for the last slot).  
+- **Recursive Clincher Rounds:** If tied again, the system auto-creates Clincher 2, 3, etc.  
+- **Strict Final Ranking:** Enforces Gold–Silver–Bronze by forcing tie-breakers until all positions are unique.
+
+### 🖥️ Role-Based Dashboards
+- **Admin Mission Control:** Real-time monitor, round lock/unlock, and instant “Sudden Death” (+1 Q).  
+- **Tabulator Panel:** Secure parallel scoring interface for rapid data entry.  
+- **Live Leaderboard:** Auto-updates, hides cumulative info in finals, highlights active teams and winners.
+
+### 📄 Official Reporting
+- **Automated PDF Generation** using FPDF.  
+- **Dynamic Layout:** Adjusts automatically based on rounds played.  
+- **Digital Signatories:** Auto-generated blocks for Tabulators and Head Admin.
+
+---
+
+## 🛠️ Tech Stack
+
+**Backend:** Python, Flask, SQLAlchemy  
+**Database:** SQLite (Development)  
+**Frontend:** HTML5, CSS3, Bootstrap 5, Jinja2  
+**PDF Engine:** FPDF  
+**Icons:** FontAwesome  
+
+---
+
+## 🚀 Installation & Setup
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/your-username/jpcs-quiz-bee-tabulation.git
+cd jpcs-quiz-bee-tabulation
+````
+
+### 2. Create a Virtual Environment
+
+```bash
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# Mac/Linux
+source .venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run the Application
+
+```bash
+python main.py
+```
+
+The app will run at **[http://127.0.0.1:5000](http://127.0.0.1:5000)**.
+
+---
+
+## 📖 User Guide
+
+### 1. **Admin (Mission Control)**
+
+* Login via `/login` (Role: Admin)
+* Create Event → Choose **Hybrid**
+* Define rounds (Easy/Average/Difficult/Final)
+* Set number of qualifiers
+* Register schools + assign Tabulator accounts
+* Use **Live Round Control** to start rounds and evaluate scores
+
+### 2. **Tabulator (Data Entry)**
+
+* Login with assigned credentials
+* Wait for Admin to start the round
+* Enter scoring (Correct/Wrong toggles)
+
+### 3. **Viewer (Audience)**
+
+* Open `/leaderboard`
+* Auto-refreshes every 3–5 seconds
+
+---
+
+## 📸 System Screenshots
+
+*(Insert Mission Control, Scoring Page, Leaderboard images here)*
+
+---
+
+## 👥 Credits & Acknowledgements
+
+**Developed By:**
+Guiller Angelo Hermoso – Director for Projects 2025
+
+**Powered By:**
+Junior Philippine Computer Society – CSPC Chapter
+*“Excellence in Technology, Leadership in Action.”*
+
+---
+
+## 📄 License
+
+This project is proprietary software developed for JPCS-CSPC.
+
+```
+</file>
+
+<file path="seed.py">
+from website import create_app, db
+from website.models import User
+from werkzeug.security import generate_password_hash
+
+app = create_app()
+
+with app.app_context():
+    db.drop_all()
+    db.create_all()  # ensure tables exist
+
+    # Only create if not already present
+    if not User.query.filter_by(username="admin1").first():
+        admin = User(
+            username="admin1",
+            password=generate_password_hash("adminpass"),
+            role="admin"
+        )
+        db.session.add(admin)
+        db.session.commit()
+        print("Admin account created successfully!")
+    else:
+        print("Admin account already exists.")
+
+'''
+from website import create_app, db
+# Import all models needed for seeding
+from website.models import User, Event, School, Round, Score
+from werkzeug.security import generate_password_hash
+
+# --- DATA DEFINITIONS ---
+
+# 1. Users (Tabulators have a password and the school_id they are assigned to)
+USER_DATA = [
+    # ID, Username, Role, School ID (FK on User)
+    (1, "admin1", "admin", None),
+    (2, "nami", "tabulator", 2),
+    (3, "kye", "tabulator", 1),
+    (4, "tab1", "tabulator", 3),
+    (5, "tab2", "tabulator", 4),
+    (6, "tab3", "tabulator", 5),
+    (7, "tab4", "tabulator", 6),
+    (8, "tab5", "tabulator", 7),
+    (9, "tab6", "tabulator", 8),
+    (10, "tab7", "tabulator", 9),
+    (11, "tab8", "tabulator", 10),
+    (12, "tab9", "tabulator", 11),
+    (13, "tab10", "tabulator", 12),
+]
+
+# 2. Event
+EVENT_DATA = [
+    # ID, Name, is_active (1=True)
+    (1, "JFINIX InterSchool Competition", True),
+]
+
+# 3. Schools
+SCHOOL_DATA = [
+    # ID, Name, Event ID
+    (1, "usant", 1),
+    (2, "nnhs", 1),
+    (3, "school1", 1),
+    (4, "school2", 1),
+    (5, "school3", 1),
+    (6, "school4", 1),
+    (7, "school5", 1),
+    (8, "school6", 1),
+    (9, "school7", 1),
+    (10, "school8", 1),
+    (11, "school9", 1),
+    (12, "school10", 1),
+]
+
+# 4. Rounds (We need Round IDs 1 and 4 for the score data)
+# Round: ID, number, difficulty, points, total_questions, event_id, qualifying_count, is_final
+ROUND_DATA = [
+    (1, 1, "Easy", 1, 10, 1, 10, False), # All scores provided are for this round (10 questions)
+    (2, 2, "Average", 3, 10, 1, 5, False),
+    (3, 3, "Difficult", 5, 10, 1, 0, False),
+]
+
+# 5. Score Data (school_id, round_id, question_number, is_correct)
+SCORE_DATA = [
+    (1, 1, 1, 1), (1, 1, 2, 1), (1, 1, 3, 1), (1, 1, 4, 1), (1, 1, 5, 1), (1, 1, 6, 1), (1, 1, 7, 1), (1, 1, 8, 1), (1, 1, 9, 1), (1, 1, 10, 1),
+    (2, 1, 1, 1), (2, 1, 2, 1), (2, 1, 3, 1), (2, 1, 4, 1), (2, 1, 5, 1), (2, 1, 6, 1), (2, 1, 7, 1), (2, 1, 8, 1), (2, 1, 9, 1), (2, 1, 10, 1),
+    (3, 1, 1, 1), (3, 1, 2, 0), (3, 1, 3, 1), (3, 1, 4, 1), (3, 1, 5, 1), (3, 1, 6, 1), (3, 1, 7, 1), (3, 1, 8, 1), (3, 1, 9, 0), (3, 1, 10, 1),
+    (4, 1, 1, 1), (4, 1, 2, 0), (4, 1, 3, 1), (4, 1, 4, 1), (4, 1, 5, 1), (4, 1, 6, 1), (4, 1, 7, 0), (4, 1, 8, 1), (4, 1, 9, 1), (4, 1, 10, 0),
+    (5, 1, 1, 1), (5, 1, 2, 1), (5, 1, 4, 1), (5, 1, 5, 1), (5, 1, 7, 1), (5, 1, 8, 1), (5, 1, 10, 1), (5, 1, 3, 0), (5, 1, 6, 0), (5, 1, 9, 0), # Corrected for 10 entries
+    (6, 1, 1, 1), (6, 1, 2, 1), (6, 1, 3, 1), (6, 1, 4, 1), (6, 1, 5, 1), (6, 1, 6, 0), (6, 1, 7, 1), (6, 1, 8, 1), (6, 1, 9, 0), (6, 1, 10, 1),
+    (7, 1, 1, 1), (7, 1, 2, 1), (7, 1, 3, 0), (7, 1, 4, 1), (7, 1, 5, 1), (7, 1, 6, 0), (7, 1, 7, 1), (7, 1, 8, 1), (7, 1, 9, 0), (7, 1, 10, 1),
+    (8, 1, 1, 1), (8, 1, 2, 0), (8, 1, 3, 0), (8, 1, 4, 1), (8, 1, 5, 1), (8, 1, 6, 0), (8, 1, 7, 1), (8, 1, 8, 1), (8, 1, 9, 0), (8, 1, 10, 1),
+    (9, 1, 1, 1), (9, 1, 2, 1), (9, 1, 3, 0), (9, 1, 4, 1), (9, 1, 5, 1), (9, 1, 6, 0), (9, 1, 7, 1), (9, 1, 8, 0), (9, 1, 9, 0), (9, 1, 10, 1),
+    (10, 1, 1, 1), (10, 1, 2, 1), (10, 1, 3, 0), (10, 1, 4, 1), (10, 1, 5, 0), (10, 1, 6, 0), (10, 1, 7, 1), (10, 1, 8, 0), (10, 1, 9, 0), (10, 1, 10, 1),
+    (11, 1, 1, 1), (11, 1, 2, 1), (11, 1, 3, 0), (11, 1, 4, 1), (11, 1, 5, 0), (11, 1, 6, 0), (11, 1, 7, 1), (11, 1, 8, 0), (11, 1, 9, 0), (11, 1, 10, 1),
+    (12, 1, 1, 1), (12, 1, 2, 1), (12, 1, 3, 0), (12, 1, 4, 1), (12, 1, 5, 0), (12, 1, 6, 0), (12, 1, 7, 1), (12, 1, 8, 0), (12, 1, 9, 0), (12, 1, 10, 1),
+    (10, 4, 1, 1), # Extra score for testing Round 4 (Final)
+]
+
+
+# --- SEEDING FUNCTION ---
+
+app = create_app()
+
+with app.app_context():
+    # 1. Clear and Recreate Tables (Important for model updates)
+    db.drop_all()
+    db.create_all() 
+    print("Database tables recreated.")
+
+    try:
+        # 2. Add Event
+        event_objects = {}
+        for id, name, is_active in EVENT_DATA:
+            event = Event(id=id, name=name, is_active=is_active)
+            db.session.add(event)
+            event_objects[id] = event
+
+        # 3. Add Schools
+        school_objects = {}
+        for id, name, event_id in SCHOOL_DATA:
+            school = School(id=id, name=name, event_id=event_id)
+            db.session.add(school)
+            school_objects[id] = school
+
+        # 4. Add Users (including Admin and Tabulators)
+        user_objects = {}
+        for id, username, role, school_id in USER_DATA:
+            user = User(
+                id=id,
+                username=username,
+                password=generate_password_hash("pass" if role == "admin" else "pass"), # Using 'pass' for all
+                role=role,
+                school_id=school_id # Link to the school
+            )
+            db.session.add(user)
+            user_objects[id] = user
+        
+        # 5. Add Rounds
+        round_objects = {}
+        for id, num, diff, points, q_count, event_id, qual_count, is_final in ROUND_DATA:
+            round_obj = Round(
+                id=id, 
+                number=num, 
+                difficulty=diff, 
+                points=points, 
+                total_questions=q_count, 
+                event_id=event_id, 
+                qualifying_count=qual_count,
+                is_final=is_final
+            )
+            db.session.add(round_obj)
+            round_objects[id] = round_obj
+            
+        # Set Easy Round (ID 1) to active for immediate testing
+        round_objects[1].is_active = True
+
+
+        # 6. Add Scores
+        for school_id, round_id, q_num, is_correct in SCORE_DATA:
+            score = Score(
+                school_id=school_id,
+                round_id=round_id,
+                question_number=q_num,
+                is_correct=bool(is_correct)
+            )
+            db.session.add(score)
+        
+        db.session.commit()
+        print("\n--- Seeding Complete ---")
+        print(f"Total Users: {len(USER_DATA)}")
+        print(f"Total Schools: {len(SCHOOL_DATA)}")
+        print(f"Total Scores: {len(SCORE_DATA)}")
+        print("\nTest Credentials:")
+        print("Admin: username=admin1, password=pass")
+        print("Tabulator: username=kye, password=pass (Assigned to usant)")
+        print("------------------------\n")
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"An error occurred during seeding: {e}")
+'''
+</file>
+
+<file path="website/templates/about.html">
+{% extends "base.html" %}
+{% block title %}About - JPCS{% endblock %}
+
+{% block content %}
+<style>
+    .about-header {
+        background: linear-gradient(135deg, var(--jpcs-maroon) 0%, #2C0404 100%);
+        color: white;
+        padding: 60px 0;
+        margin-bottom: 40px;
+        border-bottom: 5px solid var(--jpcs-orange);
+    }
+    .feature-icon-circle {
+        width: 60px;
+        height: 60px;
+        background-color: var(--jpcs-light);
+        color: var(--jpcs-maroon);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 15px;
+        transition: all 0.3s;
+    }
+    .card:hover .feature-icon-circle {
+        background-color: var(--jpcs-orange);
+        color: white;
+    }
+</style>
+
+<!-- Header Section -->
+<div class="about-header text-center">
+    <div class="container">
+        <h1 class="fw-bold display-5 mb-3">About the System</h1>
+        <p class="lead text-white-50 mx-auto" style="max-width: 700px;">
+            A state-of-the-art automated tabulation solution developed by the 
+            Junior Philippine Computer Society - CSPC Chapter.
+        </p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    
+    <!-- Project Context -->
+    <div class="row align-items-center mb-5">
+        <div class="col-md-6">
+            <h6 class="text-uppercase fw-bold" style="color: var(--jpcs-orange);">The Mission</h6>
+            <h2 class="fw-bold mb-4" style="color: var(--jpcs-maroon);">Precision & Efficiency</h2>
+            <p class="text-muted lead">
+                The <strong>Quiz Bee Tabulation System</strong> was architected to eliminate manual computation errors and provide real-time, transparent results for academic competitions.
+            </p>
+            <p class="text-muted">
+                Built with advanced algorithms to handle <strong>Hybrid Scoring</strong> (Cumulative + Clean Slate Final) and <strong>Iterative Tie-Breaking</strong>, this system ensures that every winner is determined fairly and accurately.
+            </p>
+        </div>
+        <div class="col-md-6 text-center">
+            <img src="{{ url_for('static', filename='JPCS2024_Group.png') }}" alt="Innovation" class="img-fluid rounded-4 shadow">
+        </div>
+    </div>
+
+    <!-- Features Grid -->
+    <div class="row g-4 mb-5 text-center">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm p-4 border-0">
+                <div class="feature-icon-circle">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <h5 class="fw-bold">Hybrid Scoring</h5>
+                <p class="small text-muted">Seamlessly switches between cumulative points for elimination rounds and back-to-zero scoring for the finals.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm p-4 border-0">
+                <div class="feature-icon-circle">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <h5 class="fw-bold">Smart Tie-Breaker</h5>
+                <p class="small text-muted">Automatically detects ties at qualifying cutoffs and generates sudden-death clincher rounds instantly.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm p-4 border-0">
+                <div class="feature-icon-circle">
+                    <i class="fas fa-file-contract"></i>
+                </div>
+                <h5 class="fw-bold">Official Reports</h5>
+                <p class="small text-muted">Generates signed, secured, and formatted PDF result sheets ready for printing and archiving.</p>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-5">
+
+    <!-- Organization / Developers -->
+    <div class="text-center mb-5">
+        <h6 class="text-uppercase fw-bold text-muted mb-3">Powered By</h6>
+        <h3 class="fw-bold mb-2">JPCS - CSPC Chapter</h3>
+        <p class="small fst-italic text-muted mb-4">Created by Elmo Angelo Hermoso - Director for Projects 2025</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card bg-light border-0">
+                    <div class="card-body p-4">
+                        <p class="fst-italic text-muted mb-0">
+                            "Excellence in Technology, Leadership in Action."
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a href="{{ url_for('views.home') }}" class="btn btn-outline-secondary">
+            &larr; Back to Home
+        </a>
+    </div>
+
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/admin/event_edit.html">
+{% extends "base.html" %}
+{% block title %}Edit Event{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h3>Edit Event</h3>
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Event Name</label>
+                <input type="text" name="name" class="form-control" value="{{ event.name }}" required>
+            </div>
+            <button type="submit" class="btn btn-success">Save Changes</button>
+            <a href="{{ url_for('views.event_registration') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/admin/tie_breaker.html">
+{% extends "base.html" %}
+{% block title %}Tie Breaker{% endblock %}
+{% block content %}
+<h2>Tie Breaker Page</h2>
+<p>Coming soon...</p>
+{% endblock %}
+</file>
+
+<file path="website/__init__.py">
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+
+db = SQLAlchemy()
+DB_NAME = "database.db"
+
+login_manager = LoginManager()
+login_manager.login_view = 'auth.login'
+
+def create_app():
+    app = Flask(__name__)
+    app.config['SECRET_KEY'] = 'kyle heineken lee'
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_NAME}'
+
+    db.init_app(app)
+
+    from .models import User
+
+    from .views import views
+    from .auth import auth
+
+    app.register_blueprint(views, url_prefix='/')
+    app.register_blueprint(auth, url_prefix='/')
+
+    login_manager.init_app(app)
+
+    @login_manager.user_loader
+    def load_user(id):
+        return User.query.get(int(id))
+
+    
+    return app
+</file>
+
+<file path="website/auth.py">
+from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask_login import login_user, logout_user, login_required
+from werkzeug.security import check_password_hash
+from .models import User
+
+auth = Blueprint('auth', __name__)
+
+@auth.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        user = User.query.filter_by(username=username).first()
+
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+
+            # Redirect based on role
+            if user.role == 'admin':
+                return redirect(url_for('views.admin_dashboard'))
+            else:
+                return redirect(url_for('views.tabulator_dashboard'))
+        else:
+            flash('Invalid username or password', category='error')
+
+    return render_template('login.html')
+
+@auth.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('auth.login'))
+</file>
+
+<file path="website/templates/admin/event_registration.html">
+{% extends "base.html" %}
+{% block title %}Event Registration & Management{% endblock %}
+{% block content %}
+
+<div class="container mt-4">
+    <h2>Event Management Center</h2>
+    <p class="lead">Create, set active, and manage rounds/schools for Quiz Bee events.</p>
+    <hr>
+
+    <!-- 1. Create New Event Form -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5>Create New Event</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <input type="hidden" name="action" value="create_event">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label for="event_name" class="form-label">Event Name</label>
+                        <input type="text" class="form-control" id="event_name" name="name" placeholder="e.g., Annual Quiz Bee 2026" required>
+                    </div>
+
+                    <!-- Scoring System Selection -->
+                    <div class="col-md-3">
+                        <label class="form-label">Scoring System</label>
+                        <select name="scoring_type" class="form-select">
+                            <option value="per_round">Per Round (Back to Zero)</option>
+                            <option value="cumulative">Cumulative (Running Total)</option>
+                            <!-- ADDED HYBRID OPTION HERE -->
+                            <option value="hybrid">Hybrid (Cumulative + Clean Final)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active">
+                            <label class="form-check-label" for="is_active">Set Active</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-success w-100">Create</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Existing Events Table -->
+    {% if events %}
+        <h3 class="mt-5">Existing Events ({{ events | length }})</h3>
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Event Name</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th class="text-center">Manage</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr class="{% if event.is_active %}table-success{% endif %}">
+                    <td>
+                        {{ event.name }}
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border">{{ event.scoring_type|default('per_round')|replace('_', ' ')|title }}</span>
+                    </td>
+                    <td>
+                        {% if event.is_active %}
+                            <span class="badge bg-success">ACTIVE</span>
+                        {% else %}
+                            <span class="badge bg-secondary">INACTIVE</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td class="text-center">
+                        <!-- Links to management pages -->
+                        <a href="{{ url_for('views.round_setup', event_id=event.id) }}" 
+                           class="btn btn-sm btn-info me-2" title="Define Rounds">Rounds</a>
+                        <a href="{{ url_for('views.school_registration', event_id=event.id) }}" class="btn btn-sm btn-warning" title="Register Schools">Schools</a>
+                    </td>
+
+                    <td class="text-center">
+                        <!-- TOGGLE ACTIVE STATUS -->
+                        {% if event.is_active %}
+                            <!-- DEACTIVATE BUTTON -->
+                            <form method="POST" action="{{ url_for('views.event_registration') }}" class="d-inline">
+                                <input type="hidden" name="action" value="deactivate">
+                                <input type="hidden" name="event_id" value="{{ event.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                        onclick="return confirm('Are you sure you want to deactivate {{ event.name }}? No event will be live.');">
+                                    Deactivate
+                                </button>
+                            </form>
+                        {% else %}
+                            <!-- ACTIVATE BUTTON -->
+                            <form method="POST" action="{{ url_for('views.event_registration') }}" class="d-inline">
+                                <input type="hidden" name="action" value="set_active">
+                                <input type="hidden" name="event_id" value="{{ event.id }}">
+                                <button type="submit" class="btn btn-sm btn-dark" 
+                                        onclick="return confirm('Set {{ event.name }} as active? All other events will be deactivated.');">
+                                    Activate
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        <!-- Edit Button -->
+                        <a href="{{ url_for('views.edit_event', event_id=event.id) }}" class="btn btn-sm btn-outline-secondary ms-2">Edit</a>
+
+                        <!-- Delete Button -->
+                        <form method="POST" action="{{ url_for('views.delete_event', event_id=event.id) }}" class="d-inline ms-1">
+                            <button type="submit" class="btn btn-sm btn-danger" 
+                                    onclick="return confirm('Are you sure? This will delete all rounds and scores for this event.');">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-info mt-5">
+            No events have been created yet. Use the form above to create your first event.
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+</file>
+
+<file path="website/templates/admin/register_user.html">
+{% extends "base.html" %}
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-dark mb-0">User Management</h2>
+        <a href="{{ url_for('views.admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            &larr; Dashboard
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- LEFT: Create User Form -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-success h-100">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New Account</h5>
+                </div>
+                
+                <div class="card-body p-4">
+                    <form method="POST">
+                        <!-- Role Selection -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Account Role</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="role" id="role_tabulator" value="tabulator" checked>
+                                    <label class="btn btn-outline-primary w-100" for="role_tabulator">Tabulator</label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="role" id="role_admin" value="admin">
+                                    <label class="btn btn-outline-danger w-100" for="role_admin">Admin</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Username</label>
+                            <input type="text" class="form-control" name="username" placeholder="e.g. tab_main" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">First Name</label>
+                            <input type="text" class="form-control" name="first_name" placeholder="e.g. Juan Dela Cruz">
+                            <div class="form-text">Used for signatures in reports.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Password</label>
+                            <input type="text" class="form-control" name="password" placeholder="Set initial password" required>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-success">Create Account</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Existing Users List -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Existing Accounts</h5>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-striped table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Username</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td class="fw-bold">{{ user.username }}</td>
+                                <td>{{ user.first_name if user.first_name else '-' }}</td>
+                                <td>
+                                    {% if user.role == 'admin' %}
+                                        <span class="badge bg-danger">Admin</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">Tabulator</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <!-- Edit Button -->
+                                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- EDIT USER MODAL -->
+                            <div class="modal fade" id="editUserModal{{ user.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Edit User: {{ user.username }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('views.edit_user', user_id=user.id) }}">
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Username</label>
+                                                    <input type="text" name="username" class="form-control" value="{{ user.username }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">First Name</label>
+                                                    <input type="text" name="first_name" class="form-control" value="{{ user.first_name or '' }}">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label text-danger fw-bold">Reset Password</label>
+                                                    <input type="text" name="password" class="form-control" placeholder="Leave empty to keep current">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% else %}
+                            <tr><td colspan="4" class="text-center py-4">No users found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/admin/round_setup.html">
+{% extends "base.html" %}
+{% block title %}Round Configuration{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Setup Rounds</h2>
+            <h5 class="text-muted">Event: <strong>{{ event.name }}</strong></h5>
+        </div>
+        <a href="{{ url_for('views.event_registration') }}" class="btn btn-outline-secondary">
+            &larr; Back to Events List
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- LEFT COLUMN: Add Round Form -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-primary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-plus-circle"></i> Add New Round
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        
+                        <!-- Order -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Order #</label>
+                            <input type="number" name="round_number" class="form-control" placeholder="e.g. 1" required>
+                            <div class="form-text">1=First round, 2=Second...</div>
+                        </div>
+
+                        <!-- Difficulty Name -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Round Name</label>
+                            <input type="text" name="difficulty" class="form-control" list="difficultyOptions" placeholder="Type or select..." required>
+                            <datalist id="difficultyOptions">
+                                <option value="Easy">
+                                <option value="Average">
+                                <option value="Difficult">
+                                <option value="Clincher">
+                            </datalist>
+                        </div>
+
+                        <!-- Points -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Points per Question</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Pts</span>
+                                <input type="number" name="points" class="form-control" placeholder="e.g. 5" required>
+                            </div>
+                        </div>
+
+                        <!-- Questions Count -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Total Questions</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Qty</span>
+                                <input type="number" name="total_questions" class="form-control" placeholder="e.g. 10" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Qualifiers -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Qualifiers (Advance)</label>
+                            <input type="number" name="qualifying_count" class="form-control" placeholder="e.g. 10 (0 = All)">
+                            <div class="form-text">Top N schools to advance.</div>
+                        </div>
+
+                        <!-- Is Final -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_final" name="is_final">
+                            <label class="form-check-label fw-bold" for="is_final">Is Final Round?</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Save Round</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: List of Rounds -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Current Rounds Configuration
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0 align-middle text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th class="text-start">Round Name</th>
+                                <th>Points</th>
+                                <th>Questions</th>
+                                <th>Qualifiers</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for round in rounds %}
+                            <tr class="{% if round.is_final %}table-warning{% endif %}">
+                                <td class="fw-bold">{{ round.number }}</td>
+                                <td class="text-start">
+                                    {{ round.difficulty }}
+                                    {% if round.is_final %}<span class="badge bg-warning text-dark ms-1">FINAL</span>{% endif %}
+                                </td>
+                                <td><span class="badge bg-info text-dark">{{ round.points }} pts</span></td>
+                                <td>{{ round.total_questions }}</td>
+                                <td>{{ round.qualifying_count if round.qualifying_count > 0 else "All" }}</td>
+                                <td>
+                                    <!-- EDIT BUTTON -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editRoundModal{{ round.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+
+                                    <!-- DELETE BUTTON -->
+                                    <form method="POST" action="{{ url_for('views.delete_round', round_id=round.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this round?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+
+                            <!-- EDIT MODAL FOR THIS ROUND -->
+                            <div class="modal fade" id="editRoundModal{{ round.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content text-start">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Edit Round: {{ round.difficulty }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('views.edit_round', round_id=round.id) }}">
+                                            <div class="modal-body">
+                                                
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-4">
+                                                        <label class="form-label">Order #</label>
+                                                        <input type="number" name="round_number" class="form-control" value="{{ round.number }}" required>
+                                                    </div>
+                                                    <div class="col-8">
+                                                        <label class="form-label">Round Name</label>
+                                                        <input type="text" name="difficulty" class="form-control" value="{{ round.difficulty }}" required>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-6">
+                                                        <label class="form-label">Points</label>
+                                                        <input type="number" name="points" class="form-control" value="{{ round.points }}" required>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label">Items</label>
+                                                        <input type="number" name="total_questions" class="form-control" value="{{ round.total_questions }}" required>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Qualifiers (Advancing)</label>
+                                                    <input type="number" name="qualifying_count" class="form-control" value="{{ round.qualifying_count }}">
+                                                </div>
+
+                                                <div class="form-check">
+                                                    <input type="checkbox" class="form-check-input" name="is_final" id="editFinal{{ round.id }}" 
+                                                           {% if round.is_final %}checked{% endif %}>
+                                                    <label class="form-check-label" for="editFinal{{ round.id }}">Is Final Round?</label>
+                                                </div>
+
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-5">
+                                    <em>No rounds created yet.</em>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/admin/school_registration.html">
+{% extends "base.html" %}
+{% block title %}School Registration{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Register Schools</h2>
+            <h5 class="text-muted">Event: <strong>{{ event.name }}</strong></h5>
+        </div>
+        <a href="{{ url_for('views.event_registration') }}" class="btn btn-outline-secondary">
+            &larr; Back to Events
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- LEFT COLUMN: Registration Form -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-primary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-school me-2"></i> Add Candidate / School
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">School / Candidate Name</label>
+                            <input type="text" name="school_name" class="form-control" placeholder="e.g. Blue Team" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Assign Tabulator</label>
+                            <select name="tabulator_id" class="form-select" required>
+                                <option value="" disabled selected>-- Select an Account --</option>
+                                
+                                {% for tab in all_tabulators %}
+                                    <!-- Disable if assigned to another school IN THIS EVENT -->
+                                    {% set is_assigned_here = false %}
+                                    {% for s in schools %}
+                                        {% if s.user_id == tab.id %}
+                                            {% set is_assigned_here = true %}
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    <option value="{{ tab.id }}">
+                                        {{ tab.username }} 
+                                        {% if tab.first_name %}({{ tab.first_name }}){% endif %}
+                                    </option>
+                                {% else %}
+                                    <option disabled>No tabulator accounts found.</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text small">
+                                Need a new tabulator? 
+                                <a href="{{ url_for('views.register_user') }}">Create Account</a>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Add to Event</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: List of Registered Schools -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Registered Schools ({{ schools|length }})
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>School Name</th>
+                                <th>Assigned Tabulator</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for school in schools %}
+                            <tr>
+                                <td class="fw-bold">{{ school.name }}</td>
+                                <td>
+                                    {% if school.tabulator %}
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="fas fa-user me-1"></i> 
+                                            {{ school.tabulator.username }}
+                                            {% if school.tabulator.first_name %}
+                                                ({{ school.tabulator.first_name }})
+                                            {% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    
+                                    <!-- EDIT BUTTON (Triggers Modal) -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editSchoolModal{{ school.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+
+                                    <!-- DELETE BUTTON -->
+                                    <form method="POST" action="{{ url_for('views.delete_school', school_id=school.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                onclick="return confirm('Remove {{ school.name }} from this event?');">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+
+                            <!-- EDIT MODAL FOR THIS SCHOOL -->
+                            <div class="modal fade" id="editSchoolModal{{ school.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Edit School Details</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('views.edit_school', school_id=school.id) }}">
+                                            <div class="modal-body">
+                                                
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">School Name</label>
+                                                    <input type="text" name="school_name" value="{{ school.name }}" class="form-control" required>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">Assigned Tabulator</label>
+                                                    <select name="tabulator_id" class="form-select">
+                                                        {% for t in all_tabulators %}
+                                                            <option value="{{ t.id }}" {% if school.user_id == t.id %}selected{% endif %}>
+                                                                {{ t.username }} 
+                                                                {% if t.first_name %}({{ t.first_name }}){% endif %}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-5">
+                                    <em>No schools registered yet.</em>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/tabulator/scoring.html">
+{% extends "base.html" %}
+{% block title %}Scoring - {{ round.difficulty }}{% endblock %}
+
+{% block content %}
+<div class="container mb-5 mt-4">
+    
+    <!-- Header Info -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">{{ school.name }}</h2>
+            <span class="badge bg-secondary">{{ round.difficulty }} Round</span>
+            <span class="badge bg-info text-dark">{{ round.points }} Pts / Question</span>
+        </div>
+        <a href="{{ url_for('views.tabulator_dashboard') }}" class="btn btn-outline-dark btn-sm">
+            &larr; Back to Dashboard
+        </a>
+    </div>
+
+    <form method="POST">
+        
+        <!-- LIST LAYOUT (Single Column) -->
+        <div class="row">
+            <div class="col-12">
+                {% for q in range(1, total_questions+1) %}
+                <div class="card mb-3 shadow-sm border-0">
+                    <div class="card-body d-flex justify-content-between align-items-center p-3">
+                        
+                        <!-- LEFT SIDE: Question Number & Status -->
+                        <div class="d-flex align-items-center">
+                            <h5 class="mb-0 fw-bold me-3">Question #{{ q }}</h5>
+                            
+                            <!-- Visual indicator of current state -->
+                            {% if score_map.get(q) == True %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Correct</span>
+                            {% elif score_map.get(q) == False %}
+                                <span class="badge bg-danger"><i class="fas fa-times"></i> Wrong</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark border">Pending</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- RIGHT SIDE: Toggle Buttons (Parallel) -->
+                        <div class="btn-group" role="group" aria-label="Scoring toggle">
+                            
+                            <!-- CORRECT BUTTON -->
+                            <input type="radio" class="btn-check" name="question_{{ q }}" id="q{{ q }}_correct" value="correct"
+                                {% if score_map.get(q) == True %}checked{% endif %}>
+                            <label class="btn btn-outline-success fw-bold px-4" for="q{{ q }}_correct">
+                                Correct
+                            </label>
+
+                            <!-- WRONG BUTTON -->
+                            <input type="radio" class="btn-check" name="question_{{ q }}" id="q{{ q }}_wrong" value="wrong"
+                                {% if score_map.get(q) == False %}checked{% endif %}>
+                            <label class="btn btn-outline-danger fw-bold px-4" for="q{{ q }}_wrong">
+                                Wrong
+                            </label>
+                        
+                        </div>
+
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Floating Submit Button Area -->
+        <div class="fixed-bottom bg-white border-top p-3 shadow">
+            <div class="container">
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg fw-bold">
+                        <i class="fas fa-save me-2"></i> Confirm & Save Scores
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Spacing for the fixed bottom button -->
+        <div style="height: 80px;"></div>
+
+    </form>
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/tabulator/tabulator_dashboard.html">
+{% extends "base.html" %}
+{% block title %}Tabulator Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Added container class to fix margins -->
+<div class="container mt-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-0">Welcome, {{ current_user.username }}</h2>
+            <p class="text-muted mb-0">
+                Assigned School: 
+                <span class="fw-bold text-primary">
+                    {{ school.name if school else "Not Assigned" }}
+                </span>
+            </p>
+        </div>
+        
+        {% if active_event %}
+            <span class="badge bg-info text-dark border">
+                Event: {{ active_event.name }}
+            </span>
+        {% endif %}
+    </div>
+    <hr>
+
+    {% if not active_event %}
+        <div class="alert alert-warning shadow-sm" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            No active Quiz Bee Event has been set by the Admin yet.
+        </div>
+    {% elif not school %}
+         <div class="alert alert-danger shadow-sm" role="alert">
+            <i class="fas fa-user-times me-2"></i>
+            You are not assigned to a school for the active event (<strong>{{ active_event.name }}</strong>). 
+            Please contact the Admin.
+        </div>
+    {% elif not rounds %}
+        <div class="alert alert-info shadow-sm" role="alert">
+            Event <strong>{{ active_event.name }}</strong> is active, but no rounds have been created yet.
+        </div>
+    {% else %}
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-list-ul me-2"></i>Available Rounds</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for round in rounds %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                        <div>
+                            <h5 class="mb-1 fw-bold text-dark">{{ round.difficulty }}</h5> 
+                            <small class="text-muted">
+                                <i class="fas fa-question-circle me-1"></i> {{ round.total_questions }} Questions 
+                                &bull; 
+                                <i class="fas fa-star me-1"></i> {{ round.points }} Pts each
+                            </small>
+                        </div>
+
+                        <div>
+                            {% if round.is_active %}
+                                <!-- Check if school is allowed in this round (e.g. Tie Breaker filter) -->
+                                {% if round.is_school_allowed(school.id) %}
+                                    <!-- ACTIVE: Green Button -->
+                                    <a href="{{ url_for('views.scoring', round_id=round.id) }}" 
+                                       class="btn btn-success fw-bold shadow-sm">
+                                       ENTER SCORING <i class="fas fa-chevron-right ms-1"></i>
+                                    </a>
+                                {% else %}
+                                    <!-- NOT PARTICIPATING -->
+                                    <button class="btn btn-secondary btn-sm" disabled>
+                                        Not Participating <i class="fas fa-ban ms-1"></i>
+                                    </button>
+                                {% endif %}
+
+                            {% else %}
+                                <!-- INACTIVE: Grey Button (Disabled) -->
+                                <button class="btn btn-outline-secondary btn-sm" disabled>
+                                    Waiting for Admin... <i class="fas fa-hourglass-half ms-1"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+    {% endif %}
+
+</div>
+
+{% endblock %}
+</file>
+
+<file path="website/models.py">
+from . import db
+from flask_login import UserMixin
+from sqlalchemy import UniqueConstraint
+
+# User Model (Admin or Tabulator)
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(150), nullable=False)
+    first_name = db.Column(db.String(150))
+    role = db.Column(db.String(50))  # 'admin' or 'tabulator'
+    
+    # Relationship: One Tabulator can have many Schools (across different events)
+    schools_assigned = db.relationship('School', backref='tabulator', lazy=True)
+
+# Event Model
+class Event(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    is_active = db.Column(db.Boolean, default=False, index=True)
+    
+    # 'per_round' (default) or 'cumulative'
+    scoring_type = db.Column(db.String(50), default='per_round') 
+    
+    schools = db.relationship('School', backref='event', cascade='all, delete-orphan')
+    rounds = db.relationship('Round', backref='event', cascade='all, delete-orphan')
+
+# Round Model
+class Round(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    number = db.Column(db.Integer, nullable=False)
+    difficulty = db.Column(db.String(50), nullable=False)
+    points = db.Column(db.Integer, nullable=False)
+    total_questions = db.Column(db.Integer, nullable=False)
+    
+    # Control Logic
+    is_active = db.Column(db.Boolean, default=False)
+    qualifying_count = db.Column(db.Integer, default=0)
+    is_final = db.Column(db.Boolean, default=False)
+    
+    # Filter for Tie Breakers / Qualifiers (Stores IDs like "1,4,5")
+    participating_school_ids = db.Column(db.String(200), nullable=True)
+    
+    scores = db.relationship('Score', backref='round', cascade='all, delete-orphan')
+
+    # Helper to check if school is allowed in this round
+    def is_school_allowed(self, school_id):
+        if not self.participating_school_ids:
+            return True
+        allowed_list = self.participating_school_ids.split(',')
+        return str(school_id) in allowed_list
+
+# School Model (The Contestants)
+class School(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False) # Removed unique=True
+    
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    scores = db.relationship('Score', backref='school', cascade='all, delete-orphan')
+
+    # THIS IS THE FIX:
+    # Make name unique ONLY within the same event.
+    # Allows "School A" in Event 1 and "School A" in Event 2.
+    __table_args__ = (
+        UniqueConstraint('name', 'event_id', name='unique_school_per_event'),
+    )
+
+# Score Model
+class Score(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    round_id = db.Column(db.Integer, db.ForeignKey('round.id'), nullable=False)
+    school_id = db.Column(db.Integer, db.ForeignKey('school.id'), nullable=False)
+    question_number = db.Column(db.Integer, nullable=False)
+    is_correct = db.Column(db.Boolean, default=False)
+</file>
+
+<file path="website/templates/admin/admin_dashboard.html">
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h2>Admin Dashboard</h2>
+                <p class="lead">Welcome, Administrator. Select an action below.</p>
+            </div>
+            <!-- NEW: CONNECT BUTTON -->
+            <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#connectModal">
+                <i class="fas fa-qrcode me-2"></i> Connect Tabulators
+            </button>
+        </div>
+        <hr>
+    </div>
+
+    <div class="row mt-3">
+        <!-- ... (Keep your existing 3 cards for Event, User, Round Control here) ... -->
+        
+        <!-- 1. Manage Events -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-primary">
+                        <i class="fas fa-calendar-alt"></i> Event Management
+                    </h5>
+                    <p class="card-text">Create new events, define rounds, and register schools.</p>
+                    <a href="{{ url_for('views.event_registration') }}" class="btn btn-primary w-100 mt-auto">Go to Events List</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Manage Users -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-success">
+                        <i class="fas fa-users"></i> User Management
+                    </h5>
+                    <p class="card-text">Create and manage Tabulator accounts.</p>
+                    <a href="{{ url_for('views.register_user') }}" class="btn btn-success w-100 mt-auto">Manage Users</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Live Round Control -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-danger">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-danger">
+                        <i class="fas fa-satellite-dish"></i> Live Round Control
+                    </h5>
+                    <p class="card-text">Monitor live scores, start/stop rounds, and manage tie-breakers.</p>
+                    <a href="{{ url_for('views.round_control') }}" class="btn btn-danger w-100 mt-auto">Go to Mission Control</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CONNECT DEVICES MODAL -->
+<div class="modal fade" id="connectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-wifi me-2"></i>Connect Tabulators</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted">Scan this code with the Tabulator's device (Phone/Tablet) to open the system.</p>
+                
+                <!-- QR Code Image -->
+                <div class="border p-2 d-inline-block rounded mb-3">
+                    <img src="{{ url_for('views.generate_qr') }}" alt="Connection QR" class="img-fluid" style="max-width: 250px;">
+                </div>
+                
+                <h4 class="fw-bold text-primary">{{ server_url }}</h4>
+                <p class="small text-muted">Make sure all devices are connected to the same Wi-Fi network.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+</file>
+
+<file path="website/templates/admin/final_results.html">
+{% extends "base.html" %}
+{% block title %}Official Final Results{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4 mb-5">
+    
+    <!-- Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{{ url_for('views.round_control') }}" class="btn btn-outline-secondary">
+            &larr; Back to Control
+        </a>
+        <a href="{{ url_for('views.download_results_pdf', event_id=event.id) }}" class="btn btn-danger btn-lg shadow">
+            <i class="fas fa-file-pdf me-2"></i> Download Official PDF
+        </a>
+    </div>
+
+    <!-- Result Paper UI -->
+    <div class="card shadow-lg border-0" style="min-height: 800px;">
+        <div class="card-body p-5">
+            
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <h1 class="fw-bold text-uppercase display-5" style="font-family: 'Times New Roman', serif; letter-spacing: 2px;">
+                    {{ event.name }}
+                </h1>
+                <div class="d-flex justify-content-center align-items-center mt-3">
+                    <hr class="w-25 me-3" style="border-top: 2px solid #333; opacity: 1;">
+                    <span class="text-uppercase fw-bold text-muted" style="letter-spacing: 2px;">Official Final Results</span>
+                    <hr class="w-25 ms-3" style="border-top: 2px solid #333; opacity: 1;">
+                </div>
+                <p class="small text-muted fst-italic mt-2">
+                    {{ event.scoring_type|capitalize }} Scoring System
+                </p>
+            </div>
+
+            <!-- Rankings Table -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle text-center mb-5 border-bottom">
+                    <thead class="bg-dark text-white text-uppercase small">
+                        <tr>
+                            <th class="py-3" style="width: 100px;">Rank</th>
+                            <th class="py-3 text-start">School / Contestant</th>
+                            <th class="py-3" style="width: 150px;">Final Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rank in rankings %}
+                        <tr class="{% if loop.index == 1 %}bg-warning bg-opacity-10{% endif %}">
+                            <!-- Rank Column -->
+                            <td class="fw-bold fs-4 py-3">
+                                {% if loop.index == 1 %}
+                                    <i class="fas fa-trophy text-warning me-1"></i> 1st
+                                {% elif loop.index == 2 %}
+                                    <span class="text-secondary">🥈 2nd</span>
+                                {% elif loop.index == 3 %}
+                                    <span class="text-warning-emphasis">🥉 3rd</span>
+                                {% else %}
+                                    <span class="text-muted">{{ loop.index }}th</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Name Column -->
+                            <td class="text-start fw-bold fs-5 py-3" style="font-family: 'Georgia', serif;">
+                                {{ rank.name }}
+                            </td>
+                            
+                            <!-- Score Column -->
+                            <td class="fw-bold fs-4 py-3 text-dark">
+                                {% if rank.has_final %}
+                                    {{ rank.final_score }}
+                                {% else %}
+                                    <span class="text-muted fs-6">Did not qualify</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Signatories List (Web View) -->
+            <div class="mt-5 pt-3">
+                <h6 class="text-center mb-4 text-uppercase fw-bold small text-muted" style="text-decoration: underline;">
+                    Certified Correct & Verified By:
+                </h6>
+                
+                <div class="row justify-content-center">
+                    <!-- Tabulators List -->
+                    <div class="col-md-5 text-center mb-4">
+                        <h6 class="fw-bold text-primary mb-3"><i class="fas fa-users me-2"></i>Official Tabulators</h6>
+                        <ul class="list-unstyled text-muted">
+                            {% for tab in tabulators %}
+                            <li class="mb-1">
+                                {{ tab.first_name if tab.first_name else tab.username }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <!-- Admins List -->
+                    <div class="col-md-5 text-center mb-4">
+                        <h6 class="fw-bold text-danger mb-3"><i class="fas fa-user-shield me-2"></i>Administrators</h6>
+                        <ul class="list-unstyled text-muted">
+                            <li class="mb-1 fw-bold text-dark">
+                                {{ admin.first_name if admin.first_name else admin.username }} (Head)
+                            </li>
+                            {% for a in admins %}
+                            <li class="mb-1">
+                                {{ a.first_name if a.first_name else a.username }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+</file>
+
+<file path="website/templates/admin/round_control.html">
+{% extends "base.html" %}
+{% block title %}Live Round Control{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <!-- LEFT PANEL: Mission Control -->
+        <div class="col-md-4 border-end">
+            <h3 class="mb-3">Mission Control</h3>
+            <h5 class="text-muted">Event: <strong>{{ event.name }}</strong></h5>
+            <hr>
+            <div class="list-group mb-4">
+                {% for round in rounds %}
+                <div class="list-group-item d-flex justify-content-between align-items-center 
+                    {% if round.is_active %}bg-primary text-white{% endif %}">
+                    <div>
+                        <h5 class="mb-0">{{ round.difficulty }}</h5>
+                        <small class="{% if round.is_active %}text-white-50{% else %}text-muted{% endif %}">
+                            <strong>{{ round.total_questions }}</strong> Qs | {{ round.points }} Pts
+                        </small>
+                        
+                        {% if round.is_active and ('Tie Breaker' in round.difficulty or 'Clincher' in round.difficulty) %}
+                        <form method="POST" action="{{ url_for('views.add_question', round_id=round.id) }}" class="d-inline ms-2">
+                            <button type="submit" class="btn btn-xs btn-outline-dark py-0" title="Add 1 Question">+1 Q</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if round.is_active %}
+                            <form method="POST" action="{{ url_for('views.stop_round', round_id=round.id) }}">
+                                <button type="submit" class="btn btn-light btn-sm fw-bold text-danger">STOP ⏹</button>
+                            </form>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('views.activate_round', round_id=round.id) }}">
+                                <button type="submit" class="btn btn-outline-success btn-sm">START ▶</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Evaluation Button -->
+            <div class="mt-3 p-3 bg-success bg-opacity-10 border border-success rounded">
+                <h6 class="text-success-emphasis"><i class="fas fa-check-circle"></i> Round Evaluation</h6>
+                {% if round_fully_completed %}
+                    <p class="small text-muted mb-2">Round Complete. Evaluate to update rankings or create clinchers.</p>
+                    <form method="POST" action="{{ url_for('views.evaluate_round', round_id=active_round.id) }}">
+                        <button type="submit" class="btn btn-success w-100 fw-bold" onclick="return confirm('Proceed with evaluation?')">
+                            Evaluate
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="alert alert-light border-secondary p-2 mb-0 text-center">
+                        <small class="text-muted"><i class="fas fa-lock"></i> Evaluation Locked</small>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Manual Link to Final Results -->
+            <div class="mt-3">
+                <a href="{{ url_for('views.final_results', event_id=event.id) }}" class="btn btn-outline-primary w-100 fw-bold">
+                    <i class="fas fa-trophy me-2"></i> View Official Results
+                </a>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Live Scoreboard -->
+        <div class="col-md-8">
+            {% if active_round %}
+                <div class="card border-primary shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <h4 class="mb-0">🔴 LIVE: {{ active_round.difficulty }}</h4>
+                            
+                            <!-- Explicitly show the cutoff rule -->
+                            {% if active_round.qualifying_count > 0 and 'Clincher' not in active_round.difficulty %}
+                                <span class="badge bg-light text-primary border rounded-pill">
+                                    Top {{ active_round.qualifying_count }} Advance
+                                </span>
+                            {% endif %}
+                            
+                            <!-- Explicitly show Scoring Mode -->
+                            {% if show_cumulative %}
+                                <span class="badge bg-warning text-dark border rounded-pill ms-1">
+                                    Cumulative
+                                </span>
+                            {% endif %}
+                        </div>
+                        <button type="button" onclick="location.reload()" class="btn btn-sm btn-light">Refresh Stats ⟳</button>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="table table-hover align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th class="text-start">School</th>
+                                    <th>Progress</th>
+                                    <!-- Dynamic Header: Shows 'Cumulative Score' or 'Score (This Round)' -->
+                                    <th>
+                                        {% if show_cumulative %}
+                                            Cumulative Score
+                                        {% else %}
+                                            Score (This Round)
+                                        {% endif %}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in live_scores %}
+                                    <!-- COLOR CODING LOGIC -->
+                                    {% set row_class = "" %}
+                                    {% set q_count = active_round.qualifying_count or 0 %}
+                                    
+                                    {% if 'Clincher' in active_round.difficulty %}
+                                        <!-- CLINCHER LOGIC: Gold/Red -->
+                                        {% if stat.current_score > 0 and stat.current_score == live_scores[0].current_score %}
+                                            {% set row_class = "table-warning" %} <!-- Gold for leader -->
+                                        {% elif stat.answered > 0 and stat.current_score < live_scores[0].current_score %}
+                                            {% set row_class = "table-danger" %}  <!-- Red for falling behind -->
+                                        {% endif %}
+                                    {% else %}
+                                        <!-- NORMAL ROUND LOGIC: Green for Qualifiers -->
+                                        {% if q_count > 0 and loop.index <= q_count %}
+                                            {% set row_class = "table-success" %}
+                                        {% endif %}
+                                    {% endif %}
+
+                                <tr class="{{ row_class }}">
+                                    <td class="fw-bold text-muted">{{ loop.index }}</td>
+                                    <td class="text-start fw-bold">
+                                        {{ stat.school }}
+                                        <!-- Green Checkmark for normal qualifying rounds -->
+                                        {% if 'Clincher' not in active_round.difficulty and q_count > 0 and loop.index <= q_count %}
+                                            <i class="fas fa-check-circle text-success small ms-1" title="Qualifying Spot"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 15px;">
+                                            {% set percent = (stat.answered / stat.total_q) * 100 %}
+                                            <div class="progress-bar bg-success" style="width: {{ percent }}%;">
+                                                <small>{{ stat.answered }}/{{ stat.total_q }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <!-- Display the calculated score (Cumulative or Current) -->
+                                    <td class="fw-bold fs-5">{{ stat.display_score }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="4" class="text-muted py-4">No data yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-secondary text-center mb-4 p-5">
+                    <h4>No Round Active</h4>
+                    <p>Select a round on the left and click START.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/home.html">
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, var(--jpcs-maroon) 0%, #5a0000 100%);
+        color: white;
+        padding: 80px 0;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+    }
+    .hero-section::before {
+        /* Abstract circle pattern */
+        content: "";
+        position: absolute;
+        top: -50px;
+        right: -50px;
+        width: 300px;
+        height: 300px;
+        background: var(--jpcs-orange);
+        opacity: 0.1;
+        border-radius: 50%;
+    }
+    .feature-icon {
+        font-size: 2.5rem;
+        color: var(--jpcs-maroon);
+        margin-bottom: 15px;
+    }
+</style>
+
+<div class="hero-section text-center shadow">
+    <div class="container position-relative" style="z-index: 2;">
+        <!-- LOGO PLACEHOLDER (rounded-circle shadow border border-4 border-warning)--> 
+        <img src="{{ url_for('static', filename='JPCS LOGO VARIANT 1.png') }}" alt="JPCS Logo" class=" mb-4 " style="width: 120px; height: 120px;">
+        
+        <h1 class="display-4 fw-bold mb-2">Quiz Bee Tabulation System</h1>
+        <p class="lead mb-4 text-white-50">Junior Philippine Computer Society - CSPC Chapter</p>
+        
+        {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('auth.login') }}" class="btn btn-warning btn-lg px-5 fw-bold shadow-sm">
+                Login to Start
+            </a>
+        {% else %}
+            {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('views.admin_dashboard') }}" class="btn btn-outline-light btn-lg px-5 fw-bold">
+                    Go to Dashboard
+                </a>
+            {% else %}
+                <a href="{{ url_for('views.tabulator_dashboard') }}" class="btn btn-outline-light btn-lg px-5 fw-bold">
+                    Go to Dashboard
+                </a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row text-center g-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm hover-scale">
+                <div class="card-body p-4">
+                    <i class="fas fa-laptop-code feature-icon"></i>
+                    <h5 class="card-title fw-bold">Automated Scoring</h5>
+                    <p class="card-text text-muted">Real-time tabulation with hybrid scoring support for cumulative and clean-slate rounds.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm hover-scale">
+                <div class="card-body p-4">
+                    <i class="fas fa-chart-line feature-icon text-warning"></i>
+                    <h5 class="card-title fw-bold">Live Leaderboards</h5>
+                    <p class="card-text text-muted">Dynamic rankings that update instantly, featuring gold, silver, and bronze highlights.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm hover-scale">
+                <div class="card-body p-4">
+                    <i class="fas fa-file-pdf feature-icon"></i>
+                    <h5 class="card-title fw-bold">Official Reports</h5>
+                    <p class="card-text text-muted">Generate professional PDF results with digital signature blocks for transparency.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/login.html">
+{% extends "base.html" %}
+{% block title %}Login - JPCS{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center min-vh-100 align-items-center" style="margin-top: -60px;">
+        <div class="col-md-5 col-lg-4">
+            
+            <!-- Brand Section -->
+            <div class="text-center mb-4">
+                <img src="{{ url_for('static', filename='JPCS LOGO VARIANT 1.png') }}" alt="Logo" class=" mb-3" style="width: 90px;">
+                <h3 class="fw-bold" style="color: var(--jpcs-maroon);">JPCS-CSPC</h3>
+                <p class="text-muted small text-uppercase letter-spacing-1">Tabulation System</p>
+            </div>
+
+            <!-- Login Card -->
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-center mb-4 fw-bold text-secondary">Sign In</h5>
+                    
+                    <form method="POST">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                            <label for="username"><i class="fas fa-user me-2 text-muted"></i>Username</label>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                            <label for="password"><i class="fas fa-lock me-2 text-muted"></i>Password</label>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold text-uppercase" style="letter-spacing: 1px;">
+                                Login
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <small class="text-muted">&copy; Junior Philippine Computer Society</small>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+</file>
+
+<file path="website/templates/viewer/leaderboard.html">
+{% extends "base.html" %}
+{% block title %}Live Leaderboard{% endblock %}
+{% block content %}
+
+<style>
+    /* Winner Styles (Only applied when no round is active) */
+    .rank-1 { background-color: #fffde7 !important; border-left: 8px solid #ffd700; } /* Gold */
+    .rank-2 { background-color: #f5f5f5 !important; border-left: 8px solid #c0c0c0; } /* Silver */
+    .rank-3 { background-color: #fff3e0 !important; border-left: 8px solid #cd7f32; } /* Bronze */
+    
+    /* Make the top 3 rows pop a bit more */
+    .rank-1 td, .rank-2 td, .rank-3 td {
+        vertical-align: middle;
+    }
+</style>
+
+<div class="container mt-4">
+
+    {% if event %}
+        <h1 class="text-center fw-bold">{{ event.name }}</h1>
+        <h4 class="text-center text-muted mb-4">
+            {% if active_round %}
+                Current Stage: <span class="text-primary">{{ active_round.difficulty }}</span>
+            {% else %}
+                Official Standings
+            {% endif %}
+        </h4>
+    
+        <div class="card shadow">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-striped table-hover mb-0 align-middle text-center">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 80px;">Rank</th>
+                            <th class="text-start">School</th>
+                            
+                            <!-- DYNAMIC ROUND HEADERS -->
+                            {% for r in rounds %}
+                                <th class="{% if active_round and r.id == active_round.id %}bg-success{% endif %}">
+                                    {{ r.difficulty }}
+                                </th>
+                            {% endfor %}
+                            
+                            {% if not is_hybrid_final %}
+                                <th class="bg-warning text-dark fw-bold">TOTAL</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rank in rankings %}
+                        
+                        <!-- Determine Row Class for Winners (Only if no active round) -->
+                        {% set row_class = "" %}
+                        {% if not active_round %}
+                            {% if loop.index == 1 %}{% set row_class = "rank-1" %}
+                            {% elif loop.index == 2 %}{% set row_class = "rank-2" %}
+                            {% elif loop.index == 3 %}{% set row_class = "rank-3" %}
+                            {% endif %}
+                        {% endif %}
+
+                        <tr class="{{ row_class }}">
+                            <!-- RANK COLUMN -->
+                            <td class="fw-bold fs-5">
+                                {% if rank.is_competing %}
+                                    <span class="text-success fs-3">&bull;</span> <!-- Green Dot (Live) -->
+                                {% else %}
+                                    {% if not active_round and loop.index <= 3 %}
+                                        <!-- Medal Icons for Final Result -->
+                                        {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% endif %}
+                                    {% else %}
+                                        #{{ loop.index }}
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            
+                            <!-- NAME -->
+                            <td class="text-start fw-bold">{{ rank.name }}</td>
+                            
+                            <!-- ROUND SCORES -->
+                            {% for r in rounds %}
+                                <td class="text-muted">
+                                    {{ rank.breakdown.get(r.difficulty, '-') }}
+                                </td>
+                            {% endfor %}
+                            
+                            <!-- TOTAL (Hidden in Final Phase) -->
+                            {% if not is_hybrid_final %}
+                                <td class="bg-warning bg-opacity-25 fw-bold fs-4">
+                                    {{ rank.total }}
+                                </td>
+                            {% endif %}
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="100%" class="text-muted py-4">Waiting for scores...</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Fast refresh when live -->
+        <meta http-equiv="refresh" content="3">
+
+    {% else %}
+        <!-- NO EVENT ACTIVE STATE -->
+        <div class="alert alert-warning text-center shadow-sm p-5 mt-5" role="alert">
+            <h1 class="display-1 mb-3"><i class="fas fa-calendar-times text-warning"></i></h1>
+            <h2 class="alert-heading fw-bold">No Active Event</h2>
+            <p class="lead">There is currently no active Quiz Bee event being broadcasted.</p>
+            <hr class="w-50 mx-auto my-4">
+            <p class="mb-0 text-muted">Please check back later or contact the administrator.</p>
+        </div>
+        <!-- Slower refresh when idle to save resources -->
+        <meta http-equiv="refresh" content="10">
+    {% endif %}
+
+</div>
+{% endblock %}
+</file>
+
+<file path="main.py">
+from website import create_app
+import socket
+
+app = create_app()
+
+def get_local_ip():
+    try:
+        # Connect to a public DNS to find the correct outgoing IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+if __name__ == '__main__':
+    # Get the local IP address
+    host_ip = get_local_ip()
+    port = 5000
+    
+    print(f" \n --- SERVER STARTED ---")
+    print(f" * Local:    http://127.0.0.1:{port}")
+    print(f" * Network:  http://{host_ip}:{port}")
+    print(f" ----------------------\n")
+
+    # host='0.0.0.0' makes it accessible to other devices
+    app.run(debug=True, host='0.0.0.0', port=port)
+</file>
+
+<file path="requirements.txt">
+blinker==1.9.0
+click==8.3.0
+colorama==0.4.6
+Flask==3.1.2
+Flask-Login==0.6.3
+Flask-SQLAlchemy==3.1.1
+fpdf==1.7.2
+greenlet==3.2.4
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+pillow==12.0.0
+qrcode==8.2
+SQLAlchemy==2.0.44
+typing_extensions==4.15.0
+Werkzeug==3.1.3
+</file>
+
+<file path=".gitignore">
+.venv/
+website/__pycache__/
+.vscode/
+.vscode/settings.json
+email.html
+</file>
+
+<file path="website/templates/base.html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}JPCS - CSPC Tabulation{% endblock %}</title>
+    
+    <!-- FAVICON (Tab Icon) -->
+    <link rel="icon" href="{{ url_for('static', filename='JPCS LOGO VARIANT 1.png') }}" type="image/png">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- JPCS THEME CONFIGURATION --- */
+        :root {
+            --jpcs-maroon: #800000;      /* Primary Brand Color */
+            --jpcs-orange: #E35205;      /* Secondary/Accent Color */
+            --jpcs-dark: #2C0404;        /* Dark Maroon for Footers/Navs */
+            --jpcs-light: #FFF5F0;       /* Light Orange Tint for Backgrounds */
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* OVERRIDE BOOTSTRAP DEFAULTS */
+        .navbar {
+            background-color: var(--jpcs-dark) !important;
+            box-shadow: 0 4px 12px rgba(128, 0, 0, 0.3);
+        }
+        .navbar-brand {
+            color: var(--jpcs-orange) !important;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .nav-link { color: rgba(255, 255, 255, 0.8) !important; }
+        .nav-link:hover { color: var(--jpcs-orange) !important; }
+        .nav-link.active { color: #fff !important; font-weight: 600; }
+
+        .btn-primary {
+            background-color: var(--jpcs-maroon);
+            border-color: var(--jpcs-maroon);
+        }
+        .btn-primary:hover {
+            background-color: #600000;
+            border-color: #500000;
+        }
+        .btn-outline-primary {
+            color: var(--jpcs-maroon);
+            border-color: var(--jpcs-maroon);
+        }
+        .btn-outline-primary:hover {
+            background-color: var(--jpcs-maroon);
+            border-color: var(--jpcs-maroon);
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+        }
+        .card-header.bg-primary {
+            background-color: var(--jpcs-maroon) !important;
+        }
+        
+        .text-primary { color: var(--jpcs-maroon) !important; }
+        .text-warning { color: var(--jpcs-orange) !important; }
+        
+        .bg-jpcs-maroon { background-color: var(--jpcs-maroon); color: white; }
+        .bg-jpcs-orange { background-color: var(--jpcs-orange); color: white; }
+
+        #flash-messages-container {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: 90%;
+            max-width: 600px;
+        }
+        .alert {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border-radius: 10px;
+        }
+        
+        .nav-logo {
+            height: 40px;
+            vertical-align: middle;
+        }
+        
+        /* Footer Link Hover */
+        .footer-link:hover {
+            color: var(--jpcs-orange) !important;
+            text-decoration: underline !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="{{ url_for('static', filename='JPTABS.png') }}" alt="JPCS Logo" class="nav-logo p-1">
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            {% if current_user.role == 'admin' %}
+                                <a class="nav-link" href="{{ url_for('views.admin_dashboard') }}">
+                                    <i class="fas fa-tachometer-alt me-1"></i> Admin Panel
+                                </a>
+                            {% else %}
+                                <a class="nav-link" href="{{ url_for('views.tabulator_dashboard') }}">
+                                    <i class="fas fa-edit me-1"></i> Tabulator Panel
+                                </a>
+                            {% endif %}
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('views.home') }}">Home</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('views.leaderboard') }}">Leaderboard</a>
+                    </li>
+
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item dropdown ms-lg-3">
+                            <a class="nav-link dropdown-toggle btn btn-outline-light rounded-pill px-3" href="#" role="button" data-bs-toggle="dropdown" style="color: white !important; border: 1px solid rgba(255,255,255,0.3);">
+                                <i class="fas fa-user-circle me-1"></i> {{ current_user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}" onclick="return confirm('Are you sure you want to logout?');">
+                                        <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item ms-lg-3">
+                            <a class="nav-link btn btn-warning text-dark px-3 rounded-pill fw-bold" href="{{ url_for('auth.login') }}" style="color: #2C0404 !important;">
+                                Login
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Floating Flash Messages -->
+    <div id="flash-messages-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {% if category == 'error' %}
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                        {% elif category == 'success' %}
+                            <i class="fas fa-check-circle me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 d-flex flex-column">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-white py-3 mt-5 border-top border-secondary" style="background-color: var(--jpcs-dark) !important; font-size: 0.85rem;">
+        <div class="container">
+            <div class="row align-items-center">
+                <!-- Left Side: Organization Info -->
+                <div class="col-md-8 text-md-start text-center mb-2 mb-md-0">
+                    <h6 class="fw-bold mb-1" style="color: var(--jpcs-orange); letter-spacing: 0.5px;">JPCS - CSPC Chapter</h6>
+                    <div class="text-light opacity-75" style="line-height: 1.3;">
+                        Junior Philippine Computer Society<br>
+                        Camarines Sur Polytechnic Colleges
+                    </div>
+                </div>
+
+                <!-- Right Side: Copyright (LINKED TO ABOUT) -->
+                <div class="col-md-4 text-md-end text-center">
+                    <a href="{{ url_for('views.about') }}" class="text-white-50 text-decoration-none footer-link">
+                        &copy; 2025 Quiz Bee Tabulation System
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Auto-dismiss alerts -->
+    <script>
+        setTimeout(function() {
+            let alerts = document.querySelectorAll('#flash-messages-container .alert');
+            alerts.forEach(function(alert) {
+                let bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 4000);
+    </script>
+</body>
+</html>
+</file>
+
+<file path="website/views.py">
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, current_app
+from flask_login import login_required, current_user
+from .models import User, Event, School, Round, Score
+from . import db
+from sqlalchemy import func
+from werkzeug.security import generate_password_hash
+from fpdf import FPDF
+from itertools import groupby 
+import os
+import socket
+import qrcode
+import io
+from flask import send_file
+
+views = Blueprint('views', __name__)
+
+def to_ordinal(n):
+    if 11 <= (n % 100) <= 13:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+    return f"{n}{suffix}"
+
+def set_active_event(event_id):
+    Event.query.update({Event.is_active: False})
+    event = Event.query.get(event_id)
+    if event:
+        event.is_active = True
+        db.session.commit()
+        return True
+    return False
+
+def get_network_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except:
+        return "127.0.0.1"
+
+@views.route('/')
+def home():
+    return render_template("home.html")
+
+@views.route('/about')
+def about():
+    return render_template("about.html")
+
+# --- VIEWER LEADERBOARD (FIXED SORTING) ---
+@views.route('/leaderboard')
+def leaderboard():
+    active_event = Event.query.filter_by(is_active=True).first()
+    if not active_event: return render_template('viewer/leaderboard.html', event=None)
+
+    active_round = Round.query.filter_by(event_id=active_event.id, is_active=True).first()
+    
+    # --- 1. IDENTIFY PHASE AND COLUMNS ---
+    display_rounds = []
+    clincher_rounds = []
+    final_round = Round.query.filter_by(event_id=active_event.id, is_final=True).first()
+    
+    # Fetch ALL rounds for calculation history (Even if not displayed)
+    all_rounds_ordered = Round.query.filter_by(event_id=active_event.id).order_by(Round.number.asc()).all()
+    cumulative_history_rounds = [r for r in all_rounds_ordered if not r.is_final and 'Clincher' not in r.difficulty and 'Tie Breaker' not in r.difficulty]
+
+    # Check Phase
+    is_hybrid_final = False
+    if active_event.scoring_type == 'hybrid':
+        if active_round and (active_round.is_final or (final_round and active_round.number == final_round.number)):
+            is_hybrid_final = True
+        elif final_round and not active_round: 
+            if Score.query.filter_by(round_id=final_round.id).first():
+                is_hybrid_final = True
+
+    if is_hybrid_final and final_round:
+        display_rounds.append(final_round)
+        clincher_rounds = Round.query.filter(
+            Round.event_id == active_event.id,
+            Round.number == final_round.number,
+            Round.difficulty.like('%Clincher%')
+        ).order_by(Round.id.asc()).all()
+        display_rounds.extend(clincher_rounds)
+    else:
+        display_rounds = cumulative_history_rounds
+
+    # --- 2. CALCULATE SCORES ---
+    schools = School.query.filter_by(event_id=active_event.id).all()
+    rankings = []
+    
+    for school in schools:
+        round_scores = {}
+        
+        # A. Scores for Displayed Columns
+        for r in display_rounds:
+            r_score = sum(s.round.points for s in school.scores if s.round_id == r.id and s.is_correct)
+            round_scores[r.difficulty] = r_score
+        
+        # B. Calculate Historical Total (For sorting fallback)
+        history_total = 0
+        for r in cumulative_history_rounds:
+            history_total += sum(s.round.points for s in school.scores if s.round_id == r.id and s.is_correct)
+
+        # C. Build Sort Key
+        sort_key = []
+        is_competing = False
+        
+        if is_hybrid_final:
+            # Priority 1: Is Qualified for Final? (1=Yes, 0=No)
+            # This ensures finalists stay above disqualified schools even if scores are 0
+            is_qualified = 0
+            if final_round and final_round.is_school_allowed(school.id):
+                is_qualified = 1
+            sort_key.append(is_qualified)
+            
+            # Priority 2: Scores in Final/Clincher Rounds
+            for r in display_rounds:
+                sort_key.append(round_scores[r.difficulty])
+            
+            # Priority 3: Historical Cumulative Total
+            # This sorts the disqualified schools (and breaks ties for finalists)
+            sort_key.append(history_total)
+
+            # Competing Status
+            if active_round and active_round.is_school_allowed(school.id):
+                is_competing = True
+                
+        else:
+            # Normal Phase: Sort by Total History
+            sort_key = [history_total]
+            if active_round and active_round.is_school_allowed(school.id):
+                is_competing = True
+
+        # D. Determine Total Display
+        if is_hybrid_final and final_round:
+             display_total = round_scores.get(final_round.difficulty, 0)
+        else:
+             display_total = history_total
+
+        rankings.append({
+            'id': school.id,
+            'name': school.name,
+            'total': display_total,
+            'breakdown': round_scores,
+            'sort_key': tuple(sort_key),
+            'is_competing': is_competing
+        })
+
+    rankings.sort(key=lambda x: x['sort_key'], reverse=True)
+
+    return render_template('viewer/leaderboard.html', 
+                           event=active_event, 
+                           rankings=rankings, 
+                           rounds=display_rounds,
+                           active_round=active_round,
+                           is_hybrid_final=is_hybrid_final)
+
+# ... (Keep Admin Routes: dashboard, register_user, edit_user, event_registration, delete_event, edit_event, school routes, round setup routes, round control, activate/stop/add question routes UNCHANGED) ...
+
+@views.route('/admin/dashboard')
+@login_required
+def admin_dashboard():
+    if current_user.role != 'admin': return "Unauthorized", 403
+    
+    server_ip = get_network_ip()
+    server_url = f"http://{server_ip}:5000"
+    
+    return render_template('admin/admin_dashboard.html', server_url=server_url)
+
+# --- QR CODE ROUTE ---
+@views.route('/admin/generate-qr')
+@login_required
+def generate_qr():
+    if current_user.role != 'admin': return "Unauthorized", 403
+    
+    # 1. Determine the URL
+    ip = get_network_ip()
+    port = 5000 # Default Flask port
+    url = f"http://{ip}:{port}"
+    
+    # 2. Generate QR Image
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # 3. Save to Byte Stream (in-memory, no file saved)
+    img_io = io.BytesIO()
+    img.save(img_io, 'PNG')
+    img_io.seek(0)
+    
+    return send_file(img_io, mimetype='image/png')
+
+@views.route('/admin/register-user', methods=['GET', 'POST'])
+@login_required
+def register_user():
+    if current_user.role != 'admin': return "Unauthorized", 403
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        role = request.form.get('role')
+        first_name = request.form.get('first_name')
+
+        user = User.query.filter_by(username=username).first()
+        if user:
+            flash('Username already exists.', category='error')
+        else:
+            new_user = User(
+                username=username,
+                password=generate_password_hash(password),
+                role=role,
+                first_name=first_name
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            flash('User created successfully!', category='success')
+            return redirect(url_for('views.register_user'))
+
+    all_users = User.query.all()
+    return render_template('admin/register_user.html', users=all_users)
+
+@views.route('/admin/user/edit/<int:user_id>', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    user = User.query.get_or_404(user_id)
+    
+    new_username = request.form.get('username')
+    new_name = request.form.get('first_name')
+    new_pass = request.form.get('password')
+    
+    if new_username: user.username = new_username
+    if new_name: user.first_name = new_name
+    if new_pass: 
+        user.password = generate_password_hash(new_pass)
+        
+    db.session.commit()
+    flash('User account updated.', 'success')
+    return redirect(url_for('views.register_user'))
+
+@views.route('/admin/event-registration', methods=['GET', 'POST'])
+@login_required
+def event_registration():
+    if current_user.role != 'admin': return "Unauthorized", 403
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create_event':
+            name = request.form.get('name')
+            is_active = request.form.get('is_active') == 'on'
+            scoring_type = request.form.get('scoring_type')
+            
+            if not name:
+                flash('Event name is required.', category='error')
+            else:
+                new_event = Event(name=name, is_active=is_active, scoring_type=scoring_type)
+                db.session.add(new_event)
+                db.session.commit()
+                if is_active: set_active_event(new_event.id)
+                flash(f'Event "{name}" created successfully.', category='success')
+                return redirect(url_for('views.round_setup', event_id=new_event.id))
+            
+        elif action == 'set_active':
+            event_id = request.form.get('event_id')
+            if set_active_event(event_id): flash('Active event updated.', category='success')
+            else: flash('Error setting active event.', category='error')
+            
+        elif action == 'deactivate':
+            event_id = request.form.get('event_id')
+            event = Event.query.get(event_id)
+            if event:
+                event.is_active = False
+                db.session.commit()
+                flash(f'Event "{event.name}" deactivated.', category='info')
+    
+    events = Event.query.order_by(Event.id.desc()).all()
+    active_event = Event.query.filter_by(is_active=True).first()
+    return render_template('admin/event_registration.html', events=events, active_event=active_event)
+
+@views.route('/admin/event/delete/<int:event_id>', methods=['POST'])
+@login_required
+def delete_event(event_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    event = Event.query.get_or_404(event_id)
+    if event.is_active:
+        flash('Cannot delete active event.', category='error')
+    else:
+        db.session.delete(event)
+        db.session.commit()
+        flash('Event deleted.', category='success')
+    return redirect(url_for('views.event_registration'))
+
+@views.route('/admin/event/edit/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def edit_event(event_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    event = Event.query.get_or_404(event_id)
+    if request.method == 'POST':
+        event.name = request.form.get('name')
+        db.session.commit()
+        flash('Event updated.', category='success')
+        return redirect(url_for('views.event_registration'))
+    return render_template('admin/event_edit.html', event=event)
+
+@views.route('/admin/school-registration/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def school_registration(event_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    event = Event.query.get_or_404(event_id)
+
+    if request.method == 'POST':
+        school_name = request.form.get('school_name')
+        tabulator_id = request.form.get('tabulator_id') 
+
+        school_exists = School.query.filter_by(name=school_name, event_id=event.id).first()
+        existing_assignment = School.query.filter_by(event_id=event.id, user_id=tabulator_id).first()
+
+        if school_exists:
+            flash(f'School "{school_name}" is already registered.', category='error')
+        elif existing_assignment:
+            flash(f'Tabulator already assigned to "{existing_assignment.name}" in this event.', category='error')
+        else:
+            new_school = School(name=school_name, event_id=event.id, user_id=tabulator_id)
+            db.session.add(new_school)
+            db.session.commit()
+            flash(f'School "{school_name}" added.', category='success')
+            return redirect(url_for('views.school_registration', event_id=event.id))
+
+    schools = School.query.filter_by(event_id=event.id).all()
+    all_tabulators = User.query.filter_by(role='tabulator').all()
+    return render_template('admin/school_registration.html', event=event, schools=schools, all_tabulators=all_tabulators)
+
+@views.route('/admin/school/edit/<int:school_id>', methods=['POST'])
+@login_required
+def edit_school(school_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    school = School.query.get_or_404(school_id)
+    new_name = request.form.get('school_name')
+    new_tab_id = request.form.get('tabulator_id')
+    
+    if new_name: school.name = new_name
+    if new_tab_id: school.user_id = new_tab_id
+    db.session.commit()
+    flash('School details updated.', 'success')
+    return redirect(url_for('views.school_registration', event_id=school.event_id))
+
+@views.route('/admin/school/delete/<int:school_id>', methods=['POST'])
+@login_required
+def delete_school(school_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    school = School.query.get_or_404(school_id)
+    event_id = school.event_id
+    db.session.delete(school)
+    db.session.commit()
+    flash('School removed.', category='success')
+    return redirect(url_for('views.school_registration', event_id=event_id))
+
+@views.route('/admin/round-setup/<int:event_id>', methods=['GET', 'POST'])
+@login_required
+def round_setup(event_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    event = Event.query.get_or_404(event_id)
+
+    if request.method == 'POST':
+        difficulty = request.form.get('difficulty')
+        points = request.form.get('points')
+        total_questions = request.form.get('total_questions')
+        round_number = request.form.get('round_number')
+        qualifying_count = request.form.get('qualifying_count')
+        is_final = request.form.get('is_final') == 'on'
+
+        new_round = Round(
+            event_id=event.id,
+            number=round_number,
+            difficulty=difficulty,
+            points=points,
+            total_questions=total_questions,
+            qualifying_count=int(qualifying_count) if qualifying_count else 0,
+            is_final=is_final
+        )
+        db.session.add(new_round)
+        db.session.commit()
+        flash('Round added.', category='success')
+        return redirect(url_for('views.round_setup', event_id=event.id))
+
+    rounds = Round.query.filter_by(event_id=event.id).order_by(Round.number.asc()).all()
+    return render_template('admin/round_setup.html', event=event, rounds=rounds)
+
+@views.route('/admin/round/edit/<int:round_id>', methods=['POST'])
+@login_required
+def edit_round(round_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    round_obj = Round.query.get_or_404(round_id)
+    
+    round_obj.number = request.form.get('round_number')
+    round_obj.difficulty = request.form.get('difficulty')
+    round_obj.points = request.form.get('points')
+    round_obj.total_questions = request.form.get('total_questions')
+    q_count = request.form.get('qualifying_count')
+    round_obj.qualifying_count = int(q_count) if q_count else 0
+    round_obj.is_final = request.form.get('is_final') == 'on'
+    
+    db.session.commit()
+    flash('Round details updated.', category='success')
+    return redirect(url_for('views.round_setup', event_id=round_obj.event_id))
+
+@views.route('/admin/round/delete/<int:round_id>', methods=['POST'])
+@login_required
+def delete_round(round_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    round_obj = Round.query.get_or_404(round_id)
+    event_id = round_obj.event_id
+    db.session.delete(round_obj)
+    db.session.commit()
+    flash('Round deleted.', category='success')
+    return redirect(url_for('views.round_setup', event_id=event_id))
+
+@views.route('/admin/round-control')
+@login_required
+def round_control():
+    if current_user.role != 'admin': return "Unauthorized", 403
+    active_event = Event.query.filter_by(is_active=True).first()
+    if not active_event: return redirect(url_for('views.event_registration'))
+
+    rounds = Round.query.filter_by(event_id=active_event.id).order_by(Round.number.asc()).all()
+    active_round = Round.query.filter_by(event_id=active_event.id, is_active=True).first()
+    
+    live_scores = []
+    round_fully_completed = False 
+    previous_rounds = []
+    show_cumulative = False
+    
+    if active_round:
+        final_round = Round.query.filter_by(event_id=active_event.id, is_final=True).first()
+        
+        # --- 1. DETERMINE SCORING MODE & COLUMNS ---
+        if active_event.scoring_type == 'hybrid':
+            if active_round.is_final or (final_round and active_round.number == final_round.number):
+                show_cumulative = False
+                # For Hybrid Final Clinchers, we might show the Final Round context
+                if 'Tie Breaker' in active_round.difficulty or 'Clincher' in active_round.difficulty:
+                    if final_round: previous_rounds = [final_round]
+                else:
+                    previous_rounds = []
+            else:
+                # Normal Hybrid Phase
+                # Check if Tie Breaker -> Force Non-Cumulative
+                if 'Tie Breaker' in active_round.difficulty:
+                    show_cumulative = False
+                    previous_rounds = []
+                else:
+                    show_cumulative = True
+                    previous_rounds = Round.query.filter(
+                         Round.event_id == active_event.id,
+                         Round.number < active_round.number,
+                         Round.difficulty.notlike('%Tie Breaker%')
+                     ).order_by(Round.number.asc()).all()
+                 
+        elif active_event.scoring_type == 'cumulative':
+            # === FIX: FORCE NON-CUMULATIVE FOR TIE BREAKERS ===
+            if 'Tie Breaker' in active_round.difficulty:
+                show_cumulative = False
+                previous_rounds = []
+            else:
+                show_cumulative = True
+                previous_rounds = Round.query.filter(
+                     Round.event_id == active_event.id,
+                     Round.number < active_round.number,
+                     Round.difficulty.notlike('%Tie Breaker%')
+                 ).order_by(Round.number.asc()).all()
+             
+        all_schools = School.query.filter_by(event_id=active_event.id).all()
+        participating_schools = []
+
+        if active_round.participating_school_ids:
+            allowed_ids = active_round.participating_school_ids.split(',')
+            participating_schools = [s for s in all_schools if str(s.id) in allowed_ids]
+        else:
+            participating_schools = all_schools
+        
+        all_schools_finished = True 
+        
+        for school in participating_schools:
+            scores_in_this_round = Score.query.filter_by(school_id=school.id, round_id=active_round.id).all()
+            current_round_points = 0
+            answered_count = 0
+            
+            for s in scores_in_this_round:
+                answered_count += 1
+                if s.is_correct: current_round_points += active_round.points
+            
+            if answered_count < active_round.total_questions:
+                all_schools_finished = False
+
+            breakdown = {}
+            main_score_for_sorting = 0
+            
+            if show_cumulative:
+                for r in previous_rounds:
+                    r_score = sum(s.round.points for s in school.scores 
+                                  if s.round_id == r.id and s.is_correct)
+                    breakdown[r.id] = r_score
+                    main_score_for_sorting += r_score
+                main_score_for_sorting += current_round_points
+                
+            elif active_event.scoring_type == 'hybrid' and not show_cumulative:
+                # Hybrid Final Phase Sorting Logic
+                is_clincher = ('Tie Breaker' in active_round.difficulty or 'Clincher' in active_round.difficulty)
+                if is_clincher and final_round:
+                     final_score = sum(s.round.points for s in school.scores 
+                                       if s.round_id == final_round.id and s.is_correct)
+                     breakdown[final_round.id] = final_score
+                     main_score_for_sorting = (final_score, current_round_points)
+                else:
+                     main_score_for_sorting = (current_round_points, 0)
+            
+            else:
+                # Standard Per Round / Tie Breaker Sorting
+                main_score_for_sorting = current_round_points
+
+            display_score = 0
+            if show_cumulative:
+                display_score = main_score_for_sorting
+            else:
+                display_score = current_round_points
+
+            live_scores.append({
+                'school_id': school.id,
+                'school': school.name,
+                'current_score': current_round_points,
+                'total_score': main_score_for_sorting, 
+                'display_score': display_score,
+                'breakdown': breakdown,
+                'answered': answered_count,
+                'total_q': active_round.total_questions
+            })
+            
+        if isinstance(live_scores[0]['total_score'], tuple) if live_scores else False:
+             live_scores.sort(key=lambda x: x['total_score'], reverse=True)
+        else:
+             live_scores.sort(key=lambda x: x['total_score'], reverse=True)
+        
+        if participating_schools and all_schools_finished:
+            round_fully_completed = True
+
+    return render_template('admin/round_control.html', 
+                           event=active_event, 
+                           rounds=rounds, 
+                           active_round=active_round, 
+                           live_scores=live_scores,
+                           previous_rounds=previous_rounds,
+                           show_cumulative=show_cumulative,
+                           round_fully_completed=round_fully_completed)
+
+
+@views.route('/admin/round/activate/<int:round_id>', methods=['POST'])
+@login_required
+def activate_round(round_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    target_round = Round.query.get_or_404(round_id)
+    all_rounds = Round.query.filter_by(event_id=target_round.event_id).all()
+    for r in all_rounds: r.is_active = False
+    target_round.is_active = True
+    db.session.commit()
+    flash(f'{target_round.difficulty} Round is LIVE.', category='success')
+    return redirect(url_for('views.round_control'))
+
+@views.route('/admin/round/stop/<int:round_id>', methods=['POST'])
+@login_required
+def stop_round(round_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    round_obj = Round.query.get_or_404(round_id)
+    round_obj.is_active = False
+    db.session.commit()
+    flash('Round stopped.', category='warning')
+    return redirect(url_for('views.round_control'))
+
+@views.route('/admin/round/add-question/<int:round_id>', methods=['POST'])
+@login_required
+def add_question(round_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    current_round = Round.query.get_or_404(round_id)
+    current_round.total_questions += 1
+    db.session.commit()
+    flash(f'Question added! Total: {current_round.total_questions}.', category='success')
+    return redirect(url_for('views.round_control'))
+
+# --- EVALUATION LOGIC (AUTOMATIC STOP ADDED) ---
+@views.route('/admin/round/evaluate/<int:round_id>', methods=['POST'])
+@login_required
+def evaluate_round(round_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    
+    current_round = Round.query.get_or_404(round_id)
+    event_id = current_round.event_id
+    cutoff = current_round.qualifying_count
+    event = Event.query.get(event_id)
+    
+    if cutoff == 0 and 'Clincher' not in current_round.difficulty:
+        flash('No qualifying limit set. Proceed manually.', category='info')
+        return redirect(url_for('views.round_control'))
+
+    all_schools = School.query.filter_by(event_id=event_id).all()
+    standings = []
+    
+    participating_schools = []
+    if current_round.participating_school_ids:
+        allowed_ids = current_round.participating_school_ids.split(',')
+        participating_schools = [s for s in all_schools if str(s.id) in allowed_ids]
+    else:
+        participating_schools = all_schools
+
+    for school in participating_schools:
+        score_val = 0
+        if 'Tie Breaker' in current_round.difficulty or 'Clincher' in current_round.difficulty:
+            score_val = sum(s.round.points for s in school.scores 
+                            if s.round_id == current_round.id and s.is_correct)
+        elif event.scoring_type == 'hybrid':
+            if current_round.is_final:
+                score_val = sum(s.round.points for s in school.scores 
+                                if s.round_id == current_round.id and s.is_correct)
+            else:
+                for s in school.scores:
+                    if (s.round.event_id == event.id and 
+                        s.round.number <= current_round.number and 
+                        'Tie Breaker' not in s.round.difficulty and 
+                        s.is_correct):
+                        score_val += s.round.points
+        elif event.scoring_type == 'cumulative':
+            for s in school.scores:
+                if (s.round.event_id == event.id and s.round.number <= current_round.number and 'Tie Breaker' not in s.round.difficulty and s.is_correct):
+                    score_val += s.round.points
+        else:
+            score_val = sum(s.round.points for s in school.scores if s.round_id == current_round.id and s.is_correct)
+        
+        standings.append({'school': school, 'score': score_val})
+    
+    standings.sort(key=lambda x: x['score'], reverse=True)
+
+    # === SPECIAL LOGIC: ITERATIVE CLINCHER EVALUATION ===
+    if 'Clincher' in current_round.difficulty:
+        ties_created = 0
+        
+        for score, group in groupby(standings, key=lambda x: x['score']):
+            tied_group = list(group)
+            
+            if len(tied_group) > 1:
+                tied_ids = [str(item['school'].id) for item in tied_group]
+                ids_string = ",".join(tied_ids)
+                
+                if current_round.participating_school_ids:
+                    current_participants = current_round.participating_school_ids.split(',')
+                    if set(tied_ids) == set(current_participants) and len(standings) == len(tied_group):
+                         flash("⚠️ TIE NOT BROKEN! All contestants scored the same. Please add a question (+1 Q) to break the tie.", category='error')
+                         return redirect(url_for('views.round_control'))
+
+                import re
+                match = re.search(r'Clincher (\d+)', current_round.difficulty)
+                current_num = int(match.group(1)) if match else 1
+                next_num = current_num + 1
+                
+                tb_round = Round(
+                    event_id=event_id,
+                    number=current_round.number, 
+                    difficulty=f"Clincher {next_num}",
+                    points=1,
+                    total_questions=1,
+                    participating_school_ids=ids_string,
+                    qualifying_count=0, 
+                    is_active=False,
+                    is_final=False 
+                )
+                db.session.add(tb_round)
+                ties_created += 1
+
+        db.session.commit()
+        
+        if ties_created > 0:
+            flash(f"Evaluation Complete. Created {ties_created} new Clincher round(s) for remaining ties.", "warning")
+            return redirect(url_for('views.round_control'))
+        else:
+            # === FIX START: Stop the round automatically ===
+            current_round.is_active = False
+            db.session.commit()
+            # === FIX END ===
+            
+            flash("Evaluation Complete. All ties broken! Final Ranking is set.", "success")
+            return redirect(url_for('views.final_results', event_id=event_id))
+
+    # === HYBRID FINAL - First Trigger ===
+    if event.scoring_type == 'hybrid' and current_round.is_final and not 'Clincher' in current_round.difficulty:
+        for i in range(len(standings) - 1):
+            if standings[i]['score'] == standings[i+1]['score']:
+                tied_score = standings[i]['score']
+                tied_group = [s['school'] for s in standings if s['score'] == tied_score]
+                ids_string = ",".join([str(s.id) for s in tied_group])
+                
+                tb_round = Round(
+                    event_id=event.id, number=current_round.number, 
+                    difficulty="Clincher 1",
+                    points=1, total_questions=1, participating_school_ids=ids_string,
+                    qualifying_count=0, is_active=False, is_final=False
+                )
+                db.session.add(tb_round)
+                db.session.commit()
+                flash(f"⚠️ Tie detected in Final Round. 'Clincher 1' created.", category='warning')
+                return redirect(url_for('views.round_control'))
+        
+        # === FIX START: Stop the round automatically if no ties ===
+        current_round.is_active = False
+        db.session.commit()
+        # === FIX END ===
+
+        winner_names = ", ".join([s['school'].name for s in standings[:cutoff]]) if cutoff > 0 else "Top Rankers"
+        flash(f"🏆 FINAL RESULTS OFFICIAL.", category='success')
+        return redirect(url_for('views.final_results', event_id=event.id))
+
+    # === STANDARD LOGIC ===
+    if len(standings) > cutoff and cutoff > 0:
+        boundary_score = standings[cutoff - 1]['score']
+        next_score = standings[cutoff]['score']
+        
+        if boundary_score == next_score:
+             if 'Tie Breaker' in current_round.difficulty:
+                 flash("Tie still exists. Add question.", category='error')
+                 return redirect(url_for('views.round_control'))
+             
+             tied_schools = [s['school'] for s in standings if s['score'] == boundary_score]
+             ids_string = ",".join([str(s.id) for s in tied_schools])
+             clean_winners = [s for s in standings if s['score'] > boundary_score]
+             slots = cutoff - len(clean_winners)
+             
+             tb_round = Round(
+                 event_id=event.id, number=current_round.number, 
+                 difficulty=f"Tie Breaker ({current_round.difficulty})",
+                 points=1, total_questions=1, participating_school_ids=ids_string,
+                 qualifying_count=slots, is_active=False, is_final=current_round.is_final
+             )
+             db.session.add(tb_round)
+             db.session.commit()
+             flash(f"Tie detected at cutoff. Tie breaker created.", category='warning')
+             return redirect(url_for('views.round_control'))
+             
+        qualified_schools = [s['school'] for s in standings[:cutoff]]
+    else:
+        qualified_schools = [s['school'] for s in standings]
+    
+    final_advancing_schools = qualified_schools
+    
+    if 'Tie Breaker' in current_round.difficulty:
+        parent_round = Round.query.filter(Round.event_id == event_id, Round.number == current_round.number, Round.difficulty.notlike('%Tie Breaker%')).first()
+        if parent_round:
+            clean_spots = parent_round.qualifying_count - current_round.qualifying_count
+            p_schools = School.query.filter_by(event_id=event_id).all()
+            p_standings = []
+            for s in p_schools:
+                if parent_round.participating_school_ids and str(s.id) not in parent_round.participating_school_ids.split(','): continue
+                sc = 0
+                is_parent_final = parent_round.is_final
+                if event.scoring_type == 'hybrid' and is_parent_final:
+                     sc = sum(score.round.points for s in s.scores if score.round_id == parent_round.id and score.is_correct)
+                elif event.scoring_type == 'cumulative' or (event.scoring_type == 'hybrid' and not is_parent_final):
+                    for score in s.scores:
+                         if (score.round.event_id == event.id and score.round.number <= parent_round.number and 'Tie Breaker' not in score.round.difficulty and score.is_correct):
+                             sc += score.round.points
+                else:
+                    sc = sum(score.round.points for s in s.scores if score.round_id == parent_round.id and score.is_correct)
+                p_standings.append({'school': s, 'score': sc})
+            p_standings.sort(key=lambda x: x['score'], reverse=True)
+            clean_winners = [x['school'] for x in p_standings[:clean_spots]]
+            final_advancing_schools = clean_winners + qualified_schools
+
+    is_event_over = current_round.is_final or ('Tie Breaker' in current_round.difficulty and 'Final' in current_round.difficulty)
+    
+    if is_event_over:
+        return redirect(url_for('views.final_results', event_id=event.id))
+    else:
+        next_round = Round.query.filter(Round.event_id == event.id, Round.number > current_round.number).order_by(Round.number.asc()).first()
+        if next_round:
+            ids = ",".join([str(s.id) for s in final_advancing_schools])
+            next_round.participating_school_ids = ids
+            db.session.commit()
+            flash('Advanced to next round.', 'success')
+        else:
+            flash('Evaluation complete. No next round found.', 'warning')
+
+    return redirect(url_for('views.round_control'))
+
+@views.route('/admin/final-results/<int:event_id>')
+@login_required
+def final_results(event_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    event = Event.query.get_or_404(event_id)
+    
+    # Calculate Rankings (Same logic as PDF)
+    all_rounds = Round.query.filter_by(event_id=event.id).order_by(Round.number.asc()).all()
+    
+    # A. Cumulative Rounds (Non-Final, Non-TieBreaker)
+    cumulative_rounds = [r for r in all_rounds if not r.is_final and 'Tie Breaker' not in r.difficulty and 'Clincher' not in r.difficulty]
+    
+    # B. Final Round
+    final_round = Round.query.filter_by(event_id=event.id, is_final=True).first()
+    
+    # C. Final Phase Clinchers
+    final_clinchers = []
+    if final_round:
+        final_clinchers = Round.query.filter(
+            Round.event_id == event.id,
+            Round.number == final_round.number,
+            Round.difficulty.like('%Clincher%')
+        ).order_by(Round.id.asc()).all()
+    
+    schools = School.query.filter_by(event_id=event.id).all()
+    rankings = []
+    
+    for school in schools:
+        data = {'name': school.name, 'cum_total': 0, 'final_score': 0, 'clincher_scores': [], 'has_final': False}
+        
+        # 1. Cumulative
+        for r in cumulative_rounds:
+            data['cum_total'] += sum(s.round.points for s in school.scores if s.round_id == r.id and s.is_correct)
+            
+        # 2. Final
+        if final_round and final_round.is_school_allowed(school.id):
+            data['has_final'] = True
+            data['final_score'] = sum(s.round.points for s in school.scores if s.round_id == final_round.id and s.is_correct)
+        
+        # 3. Clinchers
+        c_scores_list = []
+        for r in final_clinchers:
+             if r.is_school_allowed(school.id):
+                 c_scores_list.append(sum(s.round.points for s in school.scores if s.round_id == r.id and s.is_correct))
+             else:
+                 c_scores_list.append(-1)
+        
+        data['sort_key'] = (data['has_final'], data['final_score'], tuple(c_scores_list), data['cum_total'])
+        rankings.append(data)
+
+    rankings.sort(key=lambda x: x['sort_key'], reverse=True)
+
+    # Get Signatories for List
+    tabulators = db.session.query(User).join(School).filter(School.event_id == event.id).all()
+    unique_tabulators = list({t.id: t for t in tabulators}.values())
+    admin_signatories = User.query.filter(User.role == 'admin', User.username != 'admin1').all()
+
+    return render_template('admin/final_results.html', event=event, rankings=rankings, 
+                           tabulators=unique_tabulators, admins=admin_signatories, admin=current_user)
+
+@views.route('/admin/final-results/pdf/<int:event_id>')
+@login_required
+def download_results_pdf(event_id):
+    if current_user.role != 'admin': return "Unauthorized", 403
+    event = Event.query.get_or_404(event_id)
+    
+    # --- 1. IDENTIFY ROUNDS & COLUMNS ---
+    all_rounds = Round.query.filter_by(event_id=event.id).order_by(Round.number.asc()).all()
+    cumulative_rounds = [r for r in all_rounds if not r.is_final and 'Tie Breaker' not in r.difficulty and 'Clincher' not in r.difficulty]
+    final_round = Round.query.filter_by(event_id=event.id, is_final=True).first()
+    
+    final_clinchers = []
+    if final_round:
+        final_clinchers = Round.query.filter(
+            Round.event_id == event.id,
+            Round.number == final_round.number,
+            Round.difficulty.like('%Clincher%')
+        ).order_by(Round.id.asc()).all()
+
+    # --- 2. CALCULATE SCORES ---
+    schools = School.query.filter_by(event_id=event.id).all()
+    rankings = []
+    
+    for school in schools:
+        data = {
+            'name': school.name,
+            'cum_breakdown': {},
+            'cum_total': 0,
+            'final_score': 0,
+            'clincher_scores': [],
+            'has_final': False
+        }
+        
+        for r in cumulative_rounds:
+            score = sum(s.round.points for s in school.scores if s.round_id == r.id and s.is_correct)
+            data['cum_breakdown'][r.id] = score
+            data['cum_total'] += score
+            
+        if final_round:
+            if final_round.is_school_allowed(school.id):
+                data['has_final'] = True
+                data['final_score'] = sum(s.round.points for s in school.scores 
+                                          if s.round_id == final_round.id and s.is_correct)
+        
+        c_scores_list = []
+        for r in final_clinchers:
+             if r.is_school_allowed(school.id):
+                 s_val = sum(s.round.points for s in school.scores if s.round_id == r.id and s.is_correct)
+                 c_scores_list.append(s_val)
+             else:
+                 c_scores_list.append(-1) 
+        
+        data['clincher_scores'] = c_scores_list
+        data['sort_key'] = (
+            data['has_final'], 
+            data['final_score'], 
+            tuple(c_scores_list), 
+            data['cum_total']
+        )
+        rankings.append(data)
+
+    rankings.sort(key=lambda x: x['sort_key'], reverse=True)
+
+    # --- 3. SIGNATORIES ---
+    tabulators = db.session.query(User).join(School).filter(School.event_id == event.id).all()
+    unique_tabulators = list({t.id: t for t in tabulators}.values())
+    admin_signatories = User.query.filter(User.role == 'admin', User.username != 'admin1').all()
+
+    # --- 4. PDF GENERATION (LANDSCAPE) ---
+    class PDF(FPDF):
+        def header(self):
+            # --- CUSTOM HEADER DESIGN ---
+            
+            # 1. Background Image (header.png)
+            header_bg = os.path.join(current_app.root_path, 'static', 'header.png')
+            
+            if os.path.exists(header_bg):
+                # Use the PNG as background (Full width 297mm)
+                self.image(header_bg, x=0, y=0, w=297, h=38)
+            else:
+                # Fallback to Orange Color if image missing
+                self.set_fill_color(227, 82, 5)
+                self.rect(0, 0, 297, 35, 'F')
+
+            # 2. Logo (JPTABS.png)
+            logo_path = os.path.join(current_app.root_path, 'static', 'JPCS.png')
+            if os.path.exists(logo_path):
+                self.image(logo_path, x=12, y=4, w=25)
+
+            # 3. Header Text (White, Times New Roman, Smaller & Higher)
+            self.set_text_color(255, 255, 255)
+            
+            # College Name
+            self.set_xy(40, 4) # Higher Y
+            self.set_font('Times', '', 10) 
+            self.cell(0, 10, "Camarines Sur Polytechnic Colleges", 0, 2, 'L')
+            
+            # Department Name
+            self.set_xy(40, 8) 
+            self.cell(0, 10, "College of Computer Studies", 0, 2, 'L')
+            
+            # Org Name (Bold & Larger)
+            self.set_xy(40, 13) 
+            self.set_font('Times', 'B', 13) 
+            self.cell(0, 10, "Junior Philippine Computer Society", 0, 2, 'L')
+            
+            # Chapter Name
+            self.set_xy(40, 18) 
+            self.set_font('Times', 'B', 10) 
+            self.cell(0, 10, "CSPC Chapter", 0, 2, 'L')
+
+            # --- DOCUMENT TITLE (Below the orange bar) ---
+            self.set_y(30) # Ensure enough space below header image
+            self.set_text_color(0, 0, 0) # Reset to Black
+            self.set_font('Times', 'B', 16) # Changed to Times
+            self.cell(0, 10, event.name, 0, 1, 'C')
+            
+            self.set_font('Times', 'I', 11) # Changed to Times Italic
+            self.cell(0, 5, 'Official Final Results', 0, 1, 'C')
+            self.ln(5)
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Arial', 'I', 8)
+            self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+    pdf = PDF(orientation='L', format='A4')
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # --- TABLE CONFIGURATION ---
+    eff_width = pdf.w - 2 * pdf.l_margin
+    
+    w_rank = 15
+    w_school_min = 60 
+    
+    cols = []
+    for r in cumulative_rounds:
+        cols.append({'name': r.difficulty[:10], 'type': 'cum_round', 'id': r.id})
+    cols.append({'name': 'CUMULATIVE', 'type': 'cum_total', 'bg': True})
+    if final_round:
+        cols.append({'name': 'FINAL', 'type': 'final', 'bg': True})
+    for idx, r in enumerate(final_clinchers):
+        cols.append({'name': f'C{idx+1}', 'type': 'clincher', 'idx': idx})
+
+    num_score_cols = len(cols)
+    available_for_scores = eff_width - w_rank - w_school_min
+    w_col = available_for_scores / num_score_cols
+    if w_col > 25: w_col = 25
+    w_school = eff_width - w_rank - (num_score_cols * w_col)
+
+    # --- DRAW TABLE HEADER ---
+    pdf.set_font("Arial", 'B', 10)
+    pdf.set_fill_color(230, 230, 230)
+    
+    pdf.cell(w_rank, 10, "Rank", 1, 0, 'C', True)
+    pdf.cell(w_school, 10, "School / Candidate", 1, 0, 'C', True)
+    
+    for col in cols:
+        pdf.cell(w_col, 10, col['name'], 1, 0, 'C', True)
+    pdf.ln()
+
+    # --- DRAW TABLE ROWS ---
+    pdf.set_font("Arial", '', 10)
+    
+    previous_sort_key = None
+    display_rank = 0
+
+    for i, rank in enumerate(rankings):
+        current_sort_key = rank['sort_key']
+        if i == 0: display_rank = 1
+        elif current_sort_key != previous_sort_key: display_rank = i + 1
+        previous_sort_key = current_sort_key
+        rank_str = to_ordinal(display_rank)
+        
+        fill = False
+        if display_rank <= 3: 
+            pdf.set_fill_color(255, 248, 220) 
+            fill = True
+        
+        pdf.cell(w_rank, 10, rank_str, 1, 0, 'C', fill)
+        pdf.cell(w_school, 10, rank['name'], 1, 0, 'L', fill)
+        
+        for col in cols:
+            val = "-"
+            if col['type'] == 'cum_round':
+                val = str(rank['cum_breakdown'].get(col['id'], 0))
+            elif col['type'] == 'cum_total':
+                val = str(rank['cum_total'])
+                pdf.set_font("Arial", 'B', 10)
+            elif col['type'] == 'final':
+                if rank['has_final']:
+                    val = str(rank['final_score'])
+                    pdf.set_font("Arial", 'B', 10)
+                else:
+                    val = "-" 
+            elif col['type'] == 'clincher':
+                score_list = rank['clincher_scores']
+                idx = col['idx']
+                if idx < len(score_list):
+                    s = score_list[idx]
+                    val = str(s) if s != -1 else "-"
+            
+            pdf.cell(w_col, 10, val, 1, 0, 'C', fill)
+            pdf.set_font("Arial", '', 10)
+            
+        pdf.ln()
+
+    # --- SIGNATORIES (FORCE NEW PAGE) ---
+    pdf.add_page() 
+    
+    # Header image repeats automatically via header(), so set Y below it
+    pdf.set_y(47) 
+    
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "Certified Correct & Verified By:", 0, 1, 'C')
+    pdf.ln(15)
+
+    # --- GRID SETTINGS UPDATED FOR 4 COLUMNS & TIGHTER SPACING ---
+    col_count_max = 4 # Changed from 3 to 4
+    col_width = eff_width / col_count_max
+    row_height = 30 # Reduced height from 35 to 30 (Tighter vertical spacing)
+    current_y = pdf.get_y()
+
+    def draw_signature_grid(signatories_list, title):
+        nonlocal current_y
+        chunks = [signatories_list[i:i + col_count_max] for i in range(0, len(signatories_list), col_count_max)]
+        for chunk in chunks:
+            if current_y + row_height > 190: 
+                pdf.add_page()
+                current_y = pdf.get_y() + 10
+            
+            num_in_row = len(chunk)
+            row_content_width = num_in_row * col_width
+            empty_space = eff_width - row_content_width
+            start_x = pdf.l_margin + (empty_space / 2)
+
+            for i, person in enumerate(chunk):
+                display_name = (person.first_name if person.first_name else person.username).upper()
+                x_pos = start_x + (i * col_width)
+                line_width = col_width * 0.85 # Increased width slightly for better balance in 4 cols
+                line_start_x = x_pos + (col_width - line_width) / 2
+                
+                pdf.line(line_start_x, current_y + 15, line_start_x + line_width, current_y + 15)
+                pdf.set_xy(x_pos, current_y + 16)
+                pdf.set_font("Arial", 'B', 9) # Font size kept readable
+                pdf.cell(col_width, 5, display_name, 0, 2, 'C')
+                pdf.set_font("Arial", 'I', 7)
+                pdf.cell(col_width, 4, title, 0, 0, 'C')
+            
+            current_y += row_height
+
+    pdf.set_font("Arial", '', 10)
+    draw_signature_grid(unique_tabulators, "Official Tabulator")
+    current_y += 10 # Reduced spacing between sections
+    
+    if admin_signatories:
+        draw_signature_grid(admin_signatories, "Administrator")
+    else:
+        if current_y + row_height > 190: pdf.add_page(); current_y = pdf.get_y()
+        admin_line_width = 80
+        admin_line_start = (pdf.w - admin_line_width) / 2
+        pdf.line(admin_line_start, current_y + 15, admin_line_start + admin_line_width, current_y + 15)
+        pdf.set_xy(0, current_y + 16)
+        pdf.set_font("Arial", 'B', 10)
+        name = (current_user.first_name if current_user.first_name else current_user.username).upper()
+        pdf.cell(0, 5, name, 0, 1, 'C')
+        pdf.set_font("Arial", 'I', 7)
+        pdf.cell(0, 4, "Head Administrator", 0, 1, 'C')
+
+    response = make_response(pdf.output(dest='S').encode('latin-1'))
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=Results_{event.id}.pdf'
+    return response
+
+
+# --- TABULATOR ROUTES ---
+
+@views.route('/tabulator/dashboard')
+@login_required
+def tabulator_dashboard():
+    if current_user.role != 'tabulator': return "Unauthorized", 403
+    active_event = Event.query.filter_by(is_active=True).first()
+    school = None
+    rounds = []
+    if active_event:
+        school = School.query.filter_by(event_id=active_event.id, user_id=current_user.id).first()
+        rounds = active_event.rounds
+    return render_template('tabulator/tabulator_dashboard.html', school=school, active_event=active_event, rounds=rounds)
+
+@views.route('/tabulator/scoring/<int:round_id>', methods=['GET', 'POST'])
+@login_required
+def scoring(round_id):
+    if current_user.role != 'tabulator': return "Unauthorized", 403
+    current_round = Round.query.get_or_404(round_id)
+    
+    if not current_round.is_active:
+        flash(f'The {current_round.difficulty} Round is currently closed.', category='error')
+        return redirect(url_for('views.tabulator_dashboard'))
+
+    school = School.query.filter_by(event_id=current_round.event_id, user_id=current_user.id).first()
+    if not school:
+        flash("You are not assigned to any school for this specific event.", category='error')
+        return redirect(url_for('views.tabulator_dashboard'))
+
+    if not current_round.is_school_allowed(school.id):
+        flash("Your school is not participating in this specific round.", category='warning')
+        return redirect(url_for('views.tabulator_dashboard'))
+
+    if request.method == 'POST':
+        for q_num in range(1, current_round.total_questions + 1):
+            answer_status = request.form.get(f'question_{q_num}')
+            if answer_status:
+                is_correct_val = (answer_status == 'correct')
+                existing_score = Score.query.filter_by(
+                    school_id=school.id, round_id=current_round.id, question_number=q_num).first()
+                if existing_score: existing_score.is_correct = is_correct_val
+                else:
+                    new_score = Score(school_id=school.id, round_id=current_round.id, 
+                                      question_number=q_num, is_correct=is_correct_val)
+                    db.session.add(new_score)
+        db.session.commit()
+        flash('Scores saved successfully!', category='success')
+        return redirect(url_for('views.scoring', round_id=current_round.id))
+
+    existing_scores = Score.query.filter_by(school_id=school.id, round_id=current_round.id).all()
+    score_map = {s.question_number: s.is_correct for s in existing_scores}
+    return render_template('tabulator/scoring.html', school=school, round=current_round, 
+                           total_questions=current_round.total_questions, score_map=score_map)
+</file>
+
+</files>
