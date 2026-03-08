@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- SEO Best Practices -->
+    <title>{% block title %}Home{% endblock %} - JudgeMeNot</title>
+    <meta name="description" content="JudgeMeNot 2.0 - A modern, comprehensive event scoring and tabulation system designed for pageants and quiz bees.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Uniform Header / Navigation -->
+        <header class="main-header glassmorphism">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-gavel"></i>
+                </div>
+                <h1 class="logo-text">JudgeMe<span class="accent">Not</span></h1>
+            </div>
+            
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="{{ url_for('index') }}" class="nav-link active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+                    <li><a href="#" class="nav-link"><i class="fa-solid fa-users"></i> Participants</a></li>
+                    <li><a href="#" class="nav-link"><i class="fa-solid fa-star"></i> Scoring</a></li>
+                    <li><a href="#" class="nav-link"><i class="fa-solid fa-chart-pie"></i> Results</a></li>
+                </ul>
+            </nav>
+            
+            <div class="user-profile">
+                <div class="profile-info">
+                    <span class="username">Admin</span>
+                    <span class="role">System Administrator</span>
+                </div>
+                <div class="avatar">
+                    <i class="fa-solid fa-user-tie"></i>
+                </div>
+                <button class="btn-icon" aria-label="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            {% block content %}
+            {% endblock %}
+        </main>
+        
+        <!-- Uniform Footer -->
+        <footer class="main-footer">
+            <p>&copy; 2026 JudgeMeNot Tabulation System. All rights reserved.</p>
+        </footer>
+    </div>
+    
+    <!-- Scripts -->
+    <script>
+        // Micro-animations script for page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const elements = document.querySelectorAll('.fade-in-up');
+            elements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.classList.add('visible');
+                }, index * 100);
+            });
+        });
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

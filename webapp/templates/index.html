@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up">
+    <!-- Welcome Header Section -->
+    <header class="page-header">
+        <div>
+            <h2>Dashboard Overview</h2>
+            <p class="text-muted">Welcome back to the JudgeMeNot Tabulation System</p>
+        </div>
+
+        <div class="header-actions">
+            <button class="btn btn-primary glass-effect"><i class="fa-solid fa-plus"></i> New Event</button>
+            <button class="btn btn-secondary glass-effect"><i class="fa-solid fa-file-export"></i> Export
+                Report</button>
+        </div>
+    </header>
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.1s;">
+            <div class="stat-icon bg-gradient-primary">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Active Events</p>
+                <h3 class="stat-value">2</h3>
+            </div>
+            <div class="stat-trend positive">
+                <i class="fa-solid fa-arrow-trend-up"></i> Ongoing Now
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.2s;">
+            <div class="stat-icon bg-gradient-secondary">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Total Participants</p>
+                <h3 class="stat-value">48</h3>
+            </div>
+            <div class="stat-trend">
+                Registered
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.3s;">
+            <div class="stat-icon bg-gradient-accent">
+                <i class="fa-solid fa-clipboard-check"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Scores Submitted</p>
+                <h3 class="stat-value">64%</h3>
+            </div>
+            <div class="stat-trend warning">
+                <i class="fa-solid fa-clock"></i> Waiting on Judges
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area split into 2 columns -->
+    <div class="content-grid mt-4">
+
+        <!-- Left Column: Ongoing Events -->
+        <div class="glass-panel recent-activity fade-in-up" style="animation-delay: 0.4s;">
+            <div class="panel-header">
+                <h3>Current Events</h3>
+                <a href="#" class="view-all">View All</a>
+            </div>
+
+            <div class="event-list">
+                <div class="event-item">
+                    <div class="event-date">
+                        <span class="month">MAR</span>
+                        <span class="day">15</span>
+                    </div>
+                    <div class="event-info">
+                        <h4>Miss Universe 2026</h4>
+                        <p class="text-sm text-muted">Pageant • Preliminary Round</p>
+                        <div class="progress-bar-container mt-2">
+                            <div class="progress-bar bg-accent" style="width: 75%;"></div>
+                        </div>
+                    </div>
+                    <div class="event-actions">
+                        <button class="btn btn-outline-primary btn-sm">Manage</button>
+                    </div>
+                </div>
+
+                <div class="event-item mt-3">
+                    <div class="event-date">
+                        <span class="month">MAR</span>
+                        <span class="day">20</span>
+                    </div>
+                    <div class="event-info">
+                        <h4>National IOI 2026</h4>
+                        <p class="text-sm text-muted">Quiz Bee • Finals</p>
+                        <div class="progress-bar-container mt-2">
+                            <div class="progress-bar bg-primary" style="width: 25%;"></div>
+                        </div>
+                    </div>
+                    <div class="event-actions">
+                        <button class="btn btn-outline-primary btn-sm">Manage</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Quick Actions -->
+        <div class="glass-panel quick-actions fade-in-up" style="animation-delay: 0.5s;">
+            <div class="panel-header">
+                <h3>Quick Actions</h3>
+            </div>
+
+            <div class="actions-grid">
+                <button class="action-card">
+                    <div class="action-icon text-primary"><i class="fa-solid fa-list-check"></i></div>
+                    <span>Manage Criteria</span>
+                </button>
+                <button class="action-card">
+                    <div class="action-icon text-accent"><i class="fa-solid fa-users-viewfinder"></i></div>
+                    <span>Assign Judges</span>
+                </button>
+                <button class="action-card">
+                    <div class="action-icon text-secondary"><i class="fa-solid fa-trophy"></i></div>
+                    <span>View Leaderboard</span>
+                </button>
+                <button class="action-card">
+                    <div class="action-icon text-muted"><i class="fa-solid fa-gear"></i></div>
+                    <span>System Settings</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
