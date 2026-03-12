@@ -1,5 +1,6 @@
 from webapp.python.database import engine, SessionLocal
 from webapp.python.models import User, Event, Segment, Criteria, Contestant, Score, Base
+from webapp.python.auth import hash_password
 
 def run_seed():
     print("Creating tables...")
@@ -17,9 +18,10 @@ def run_seed():
     db.commit()
 
     print("Adding Users...")
-    admin = User(username="admin", password_hash="hash", name="Super Admin", role="admin")
-    judge1 = User(username="judge1", password_hash="hash", name="Judge A", role="judge")
-    tabulator1 = User(username="tab1", password_hash="hash", name="Tabulator A", role="tabulator")
+    default_pw = hash_password("hash")
+    admin = User(username="admin", password_hash=default_pw, name="Super Admin", role="admin")
+    judge1 = User(username="judge1", password_hash=default_pw, name="Judge A", role="judge")
+    tabulator1 = User(username="tab1", password_hash=default_pw, name="Tabulator A", role="tabulator")
     db.add_all([admin, judge1, tabulator1])
     db.flush()
 

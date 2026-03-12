@@ -1,7 +1,12 @@
 import bcrypt
 from datetime import datetime
+from functools import wraps
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session
+
 from webapp.python.database import SessionLocal
 from webapp.python.models import User, AuditLog
+
+auth_bp = Blueprint('auth', __name__)
 
 def hash_password(password: str) -> str:
     """Hashes a plaintext password using bcrypt."""
@@ -51,32 +56,54 @@ def authenticate_user(username: str, password: str):
     finally:
         db.close()
 
-def require_role(page, allowed_roles: list):
+def require_role(allowed_roles=None):
     """
-    Helper function for Flet to check if the current user session has permission to view a page.
-    Call this at the top of protected view functions.
+    Decorator for Flask routes to check if current user in session has permission to view a page.
+    Call this on protected view functions using @require_role(["admin"]).
     """
-    user = page.session.get("user")
-    if not user:
-        page.go("/login")
-        return False
+    if allowed_roles is None:
+        allowed_roles = []
         
-    if user.get("role") not in allowed_roles:
-        print(f"Unauthorized access attempt by {user.get('username')} to require_role {allowed_roles}")
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user = session.get('user')
+            if not user:
+                return redirect(url_for('auth.login'))
+                
+            if allowed_roles and user.get('role') not in allowed_roles:
+                print(f"Unauthorized access attempt by {user.get('username')} to require_role {allowed_roles}")
+                flash("You do not have permission to view this page.", "error")
+                return redirect(url_for('index'))
+                
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+@auth_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
         
-        # Route to default dashboard based on role
-        role = user.get("role")
-        if role == "admin":
-            page.go("/admin")
-        elif role == "judge":
-            page.go("/judge")
-        elif role == "tabulator":
-            page.go("/tabulator")
+        user_data, error = authenticate_user(username, password)
+        if error:
+            flash(error, "error")
         else:
-            page.go("/viewer")
-        return False
+            session['user'] = user_data
+            return redirect(url_for('index'))
+            
+    # Redirect if already logged in
+    if session.get('user'):
+        return redirect(url_for('index'))
         
-    return True
+    return render_template('login.html')
+
+@auth_bp.route('/logout')
+def logout():
+    session.clear()
+    flash("You have been successfully logged out.", "success")
+    return redirect(url_for('auth.login'))
 
 def log_audit_action(user_id: int, action: str, details: str):
     """Utility to quickly record an audit log"""

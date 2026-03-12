@@ -25,10 +25,14 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    # A simple page that says hello
+    # Register Blueprints
+    from webapp.python.auth import auth_bp, require_role
+    app.register_blueprint(auth_bp)
+
     @app.route('/')
+    @require_role()
     def index():
-        return render_template('index.html', title="Home")
+        return render_template('index.html', title="Dashboard")
 
     return app
 

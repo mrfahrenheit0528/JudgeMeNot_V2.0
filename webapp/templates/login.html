@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fuse-center" style="display:flex; justify-content:center; align-items:center; height:70vh;">
+    <div class="glass-panel fade-in-up" style="max-width: 400px; width:100%; padding: 2.5rem;">
+        <div class="panel-header" style="justify-content:center; border-bottom: none; margin-bottom:0.5rem;">
+            <h3 style="font-size: 1.5rem;">Sign in to JudgeMeNot</h3>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}" style="color:var(--danger); text-align:center; padding:0.5rem; margin-bottom:1rem; border-radius:var(--border-radius-sm); background:rgba(247, 118, 142, 0.1);">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.login') }}" style="margin-top: 1rem;">
+            <div style="margin-bottom: 1.25rem;">
+                <label for="username" style="display:block; margin-bottom:0.5rem; color:var(--text-muted); font-size: 0.9rem; font-weight: 500;">Username</label>
+                <div style="position: relative;">
+                    <i class="fa-solid fa-user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                    <input type="text" id="username" name="username" required placeholder="Enter your username" style="width:100%; padding:0.75rem 1rem 0.75rem 2.5rem; border-radius:var(--border-radius-sm); border:1px solid var(--text-muted); background:var(--bg-surface); color:var(--text-bright); font-family: inherit;">
+                </div>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <label for="password" style="display:block; margin-bottom:0.5rem; color:var(--text-muted); font-size: 0.9rem; font-weight: 500;">Password</label>
+                <div style="position: relative;">
+                    <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password" style="width:100%; padding:0.75rem 1rem 0.75rem 2.5rem; border-radius:var(--border-radius-sm); border:1px solid var(--text-muted); background:var(--bg-surface); color:var(--text-bright); font-family: inherit;">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding: 0.75rem; font-size: 1.05rem;">
+                <i class="fa-solid fa-right-to-bracket"></i> Login
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
