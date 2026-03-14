@@ -3,6 +3,8 @@ from webapp.python.models import User, Event, Segment, Criteria, Contestant, Sco
 from webapp.python.auth import hash_password
 
 def run_seed():
+    print("Dropping old tables...")
+    Base.metadata.drop_all(bind=engine)
     print("Creating tables...")
     Base.metadata.create_all(bind=engine)
     

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Create Event{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up">
+    <header class="page-header">
+        <div>
+            <h2>Create New Event</h2>
+            <p class="text-muted">Set up a new score-based or point-based competition</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm" style="text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+        </div>
+    </header>
+
+    <div class="glass-panel mt-4" style="max-width: 600px; margin: 0 auto;">
+        <form method="POST" action="{{ url_for('events.create') }}">
+            
+            <div class="form-group mb-3">
+                <label for="name" class="form-label">Event Name</label>
+                <input type="text" class="form-control" id="name" name="name" required placeholder="e.g. Miss Universe 2026">
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="event_type" class="form-label">Event Type</label>
+                <select class="form-control" id="event_type" name="event_type" required onchange="toggleCategoryInput()">
+                    <option value="" disabled selected>Select an event type...</option>
+                    <option value="PAGEANT">Score-Based (Pageant, Talent, Presentation)</option>
+                    <option value="QUIZBEE">Point-Based (Quiz Bee, Trivia, Hackathon)</option>
+                </select>
+                <small class="text-muted mt-1 d-block">Score-based events use segments and criteria. Point-based use rounds and correct/wrong tallying.</small>
+            </div>
+
+            <div class="form-group mb-4" id="category_container" style="display: none;">
+                <label for="category_count" class="form-label">Number of Categories</label>
+                <select class="form-control" id="category_count" name="category_count">
+                    <option value="1">1 Category (Everyone competes together)</option>
+                    <option value="2">2 Categories (e.g., Male / Female)</option>
+                </select>
+            </div>
+
+            <div class="d-grid gap-2 text-center mt-4">
+                <button type="submit" class="btn btn-primary glass-effect"><i class="fa-solid fa-check"></i> Create Event</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleCategoryInput() {
+    const typeSelect = document.getElementById("event_type");
+    const catContainer = document.getElementById("category_container");
+    if (typeSelect.value === "PAGEANT") {
+        catContainer.style.display = "block";
+    } else {
+        catContainer.style.display = "none";
+    }
+}
+</script>
+{% endblock %}

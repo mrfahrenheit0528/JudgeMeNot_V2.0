@@ -12,21 +12,23 @@
         </div>
 
         <div class="header-actions">
-            <button class="btn btn-primary glass-effect"><i class="fa-solid fa-plus"></i> New Event</button>
+            {% if session.user.role == 'admin' %}
+            <a href="{{ url_for('events.create') }}" class="btn btn-primary glass-effect" style="text-decoration: none;"><i class="fa-solid fa-plus"></i> New Event</a>
             <button class="btn btn-secondary glass-effect"><i class="fa-solid fa-file-export"></i> Export
                 Report</button>
+            {% endif %}
         </div>
     </header>
 
     <!-- Stat Cards -->
     <div class="stats-grid">
-        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.1s;">
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.1s; cursor: pointer;" onclick="document.getElementById('activeEventsModal').style.display='flex';" title="Click to view all active events">
             <div class="stat-icon bg-gradient-primary">
                 <i class="fa-solid fa-calendar-check"></i>
             </div>
             <div class="stat-content">
                 <p class="stat-label">Active Events</p>
-                <h3 class="stat-value">2</h3>
+                <h3 class="stat-value">{{ active_events_count }}</h3>
             </div>
             <div class="stat-trend positive">
                 <i class="fa-solid fa-arrow-trend-up"></i> Ongoing Now
@@ -39,7 +41,7 @@
             </div>
             <div class="stat-content">
                 <p class="stat-label">Total Participants</p>
-                <h3 class="stat-value">48</h3>
+                <h3 class="stat-value">{{ total_participants }}</h3>
             </div>
             <div class="stat-trend">
                 Registered
@@ -71,39 +73,46 @@
             </div>
 
             <div class="event-list">
-                <div class="event-item">
+                {% for event in events %}
+                <div class="event-item {% if loop.index > 1 %}mt-3{% endif %}">
                     <div class="event-date">
-                        <span class="month">MAR</span>
-                        <span class="day">15</span>
+                        <span class="month"><i class="fa-solid fa-calendar"></i></span>
                     </div>
                     <div class="event-info">
-                        <h4>Miss Universe 2026</h4>
-                        <p class="text-sm text-muted">Pageant • Preliminary Round</p>
+                        <h4>{{ event.name }}</h4>
+                        <p class="text-sm text-muted">
+                            {{ event.event_type }} 
+                            {% if event.event_type == 'PAGEANT' %}• Score-Based{% else %}• Point-Based{% endif %}
+                        </p>
                         <div class="progress-bar-container mt-2">
-                            <div class="progress-bar bg-accent" style="width: 75%;"></div>
+                            <div class="progress-bar {% if event.event_type == 'PAGEANT' %}bg-accent{% else %}bg-primary{% endif %}" style="width: {% if event.segments %}50%{% else %}10%{% endif %};"></div>
                         </div>
                     </div>
                     <div class="event-actions">
-                        <button class="btn btn-outline-primary btn-sm">Manage</button>
-                    </div>
-                </div>
-
-                <div class="event-item mt-3">
-                    <div class="event-date">
-                        <span class="month">MAR</span>
-                        <span class="day">20</span>
-                    </div>
-                    <div class="event-info">
-                        <h4>National IOI 2026</h4>
-                        <p class="text-sm text-muted">Quiz Bee • Finals</p>
-                        <div class="progress-bar-container mt-2">
-                            <div class="progress-bar bg-primary" style="width: 25%;"></div>
+                        {% if session.user.role == 'admin' %}
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('events.manage', event_id=event.id) }}" class="btn btn-outline-primary btn-sm" style="text-decoration: none;">Manage</a>
+                            
+                            <form method="POST" action="{{ url_for('events.launch', event_id=event.id) }}" style="display:inline;">
+                                {% if event.status == 'Ongoing' %}
+                                <button type="submit" class="btn btn-warning btn-sm glass-effect" onclick="promptDeactivate(event, this.form, 'Are you sure you want to pause/deactivate this event?')">
+                                    <i class="fa-solid fa-stop"></i> Deactivate
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-success btn-sm glass-effect">
+                                    <i class="fa-solid fa-play"></i> Launch
+                                </button>
+                                {% endif %}
+                            </form>
                         </div>
-                    </div>
-                    <div class="event-actions">
-                        <button class="btn btn-outline-primary btn-sm">Manage</button>
+                        {% else %}
+                        <button class="btn btn-outline-secondary btn-sm" disabled>View Only</button>
+                        {% endif %}
                     </div>
                 </div>
+                {% else %}
+                <p class="text-muted text-center mt-3">No events found.</p>
+                {% endfor %}
             </div>
         </div>
 
@@ -114,23 +123,55 @@
             </div>
 
             <div class="actions-grid">
-                <button class="action-card">
+                <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.criteria') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
                     <div class="action-icon text-primary"><i class="fa-solid fa-list-check"></i></div>
                     <span>Manage Criteria</span>
-                </button>
-                <button class="action-card">
+                </a>
+                <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.judges') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
                     <div class="action-icon text-accent"><i class="fa-solid fa-users-viewfinder"></i></div>
                     <span>Assign Judges</span>
-                </button>
-                <button class="action-card">
+                </a>
+                <a href="{{ url_for('leaderboard') }}" class="action-card" style="text-decoration: none; color: inherit;">
                     <div class="action-icon text-secondary"><i class="fa-solid fa-trophy"></i></div>
                     <span>View Leaderboard</span>
-                </button>
-                <button class="action-card">
+                </a>
+                <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.settings') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
                     <div class="action-icon text-muted"><i class="fa-solid fa-gear"></i></div>
                     <span>System Settings</span>
-                </button>
+                </a>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Events Modal -->
+<div id="activeEventsModal" class="modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(4, 11, 22, 0.7); backdrop-filter: blur(8px); z-index:9999; justify-content:center; align-items:center;">
+    <div class="glass-panel p-4" style="min-width: 500px; max-width: 90%; max-height: 85vh; overflow-y: auto;">
+        <div class="d-flex justify-content-between align-items-center mb-3 text-white">
+            <h4 style="margin:0;"><i class="fa-solid fa-calendar-check text-primary me-2"></i>Active Events</h4>
+            <button type="button" onclick="this.closest('.modal-backdrop').style.display='none'" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        
+        <div class="list-group" style="border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.9);">
+            {% set active_list = events | selectattr('status', 'equalto', 'Ongoing') | list %}
+            {% for ev in active_list %}
+            <div class="list-group-item d-flex justify-content-between align-items-center" style="border-bottom: 1px solid rgba(0,0,0,0.05); padding: 1rem;">
+                <div>
+                    <h6 style="margin-bottom:0.2rem; display:flex; align-items:center; gap:8px;">
+                        <strong>{{ ev.name }}</strong>
+                        <span style="background:#10b981; color:white; padding:2px 6px; border-radius:12px; font-size:0.65rem; font-weight:600;">ONGOING</span>
+                    </h6>
+                    <small class="text-muted">{{ ev.event_type }} • {% if ev.event_type == 'PAGEANT' %}Score-Based{% else %}Point-Based{% endif %}</small>
+                </div>
+                <a href="{{ url_for('events.manage', event_id=ev.id) }}" class="btn btn-outline-primary btn-sm glass-effect" style="text-decoration:none;">Manage</a>
+            </div>
+            {% else %}
+            <div class="text-center" style="padding: 3rem 1rem;">
+                <i class="fa-solid fa-box-open fa-3x text-muted mb-3" style="opacity: 0.5;"></i>
+                <h5 class="text-muted m-0">No Active Events</h5>
+                <p class="text-muted m-0 mt-2" style="font-size:0.9rem;">There are currently no events with an 'Ongoing' status.</p>
+            </div>
+            {% endfor %}
         </div>
     </div>
 </div>

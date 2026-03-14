@@ -42,6 +42,7 @@ class Event(Base):
     status = Column(String(20), default='Active') 
     is_locked = Column(Boolean, default=False)
     show_public_rankings = Column(Boolean, default=False)
+    category_count = Column(Integer, default=1)
     
     segments = relationship("Segment", back_populates="event", cascade="all, delete-orphan")
     contestants = relationship("Contestant", back_populates="event", cascade="all, delete-orphan")
@@ -61,6 +62,7 @@ class Segment(Base):
     is_active = Column(Boolean, default=False)
     is_revealed = Column(Boolean, default=False) 
     is_final = Column(Boolean, default=False) 
+    is_clincher = Column(Boolean, default=False) # For QuizBee tie-breaking rounds
     qualifier_limit = Column(Integer, default=0) 
     
     # --- Pageant Specific Fields ---
@@ -156,6 +158,7 @@ class JudgeProgress(Base):
     judge_id = Column(Integer, ForeignKey('users.id'))
     segment_id = Column(Integer, ForeignKey('segments.id'))
     is_finished = Column(Boolean, default=False) 
+    is_submitted = Column(Boolean, default=False) # True when scores are permanently locked
 
 class AuditLog(Base):
     __tablename__ = 'audit_logs'

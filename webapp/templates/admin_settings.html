@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}System Settings (Placeholder){% endblock %}
+{% block content %}
+<div class="dashboard-container fade-in-up text-center py-5">
+    <h2 class="text-muted"><i class="fa-solid fa-gear mb-3" style="font-size: 3rem;"></i><br>System Settings</h2>
+    <p class="text-muted mt-3">This module will contain global configuration, database backups, audit logs, and aesthetic preferences.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary glass-effect mt-4"><i class="fa-solid fa-arrow-left"></i> Return to Dashboard</a>
+</div>
+{% endblock %}

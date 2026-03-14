@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, session, redirect, url_for
 
 def create_app(test_config=None):
     # Create and configure the app
@@ -27,12 +27,43 @@ def create_app(test_config=None):
 
     # Register Blueprints
     from webapp.python.auth import auth_bp, require_role
+    from webapp.python.events import events_bp
+    from webapp.python.admin import admin_bp
+    
     app.register_blueprint(auth_bp)
+    app.register_blueprint(events_bp)
+    app.register_blueprint(admin_bp)
+
+    @app.route('/leaderboard')
+    def leaderboard():
+        return render_template('leaderboard.html')
 
     @app.route('/')
     @require_role()
     def index():
-        return render_template('index.html', title="Dashboard")
+        user = session.get('user')
+        if user['role'] == 'judge':
+            return "Judge Dashboard Placeholder"
+        elif user['role'] == 'tabulator':
+            return "Tabulator Dashboard Placeholder"
+            
+        # Admin / Admin-Viewer scope
+        from webapp.python.database import SessionLocal
+        from webapp.python.models import Event, Contestant
+        db = SessionLocal()
+        try:
+            events = db.query(Event).all()
+            # Active events calculation strictly based on Event status
+            active_events_count = sum(1 for e in events if e.status == 'Ongoing')
+            total_participants = db.query(Contestant).count()
+            
+            return render_template('index.html', 
+                                   title="Dashboard", 
+                                   events=events,
+                                   active_events_count=active_events_count,
+                                   total_participants=total_participants)
+        finally:
+            db.close()
 
     return app
 
