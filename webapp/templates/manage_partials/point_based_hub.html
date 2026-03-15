@@ -1,0 +1,529 @@
+<!-- Custom CSS-Proof Tab Navigation -->
+<div class="glass-panel mb-4 p-2 d-inline-flex align-items-center shadow-sm" style="border-radius: 12px; background: rgba(255,255,255,0.7); gap: 8px;">
+    <button type="button" id="btn-tab-mission" class="btn btn-primary fw-bold px-4" style="border-radius: 8px; border: none;" onclick="switchPbTab('mission')">
+        <i class="fa-solid fa-satellite-dish me-2"></i> Mission Control
+    </button>
+    <button type="button" id="btn-tab-setup" class="btn btn-outline-secondary fw-bold px-4" style="border-radius: 8px; border: none; background: transparent; color: #64748b;" onclick="switchPbTab('setup')">
+        <i class="fa-solid fa-sliders me-2"></i> Configuration & Setup
+    </button>
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 1: MISSION CONTROL (LIVE EXECUTION)    -->
+<!-- ========================================== -->
+<div id="tab-content-mission" style="display: block;">
+    <div class="admin-grid mb-5">
+        
+        <!-- Left: Controls -->
+        <div class="glass-panel">
+            <div class="panel-header mb-3">
+                <h3 style="margin: 0; color: #1e293b;"><i class="fa-solid fa-satellite-dish text-danger me-2"></i> Broadcast Controls</h3>
+            </div>
+            
+            <!-- Global Active Segment Check -->
+            {% set active_seg = event.segments | selectattr('is_active', 'equalto', True) | list | first %}
+            
+            <div id="mission-controls-list" style="display: flex; flex-direction: column; gap: 10px;">
+                {% for round in event.segments|sort(attribute='order_index') %}
+                <div class="shadow-sm" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s; {% if round.is_active %}background-color: var(--primary); color: white !important;{% else %}background-color: white; color: #1e293b;{% endif %}">
+                    
+                    <div style="display: flex; flex-direction: column;">
+                        <h6 style="margin: 0; font-weight: 700; font-size: 1.1rem; {% if round.is_active %}color: white !important;{% else %}color: #0f172a;{% endif %}">{{ round.name }}</h6>
+                        <small style="opacity: 0.85; font-size: 0.85rem; margin-top: 4px;">
+                            {{ round.total_questions }} Qs | {{ round.points_per_question }} Pts
+                        </small>
+                        
+                        {% if round.is_active and ('Tie Breaker' in round.name or 'Clincher' in round.name) %}
+                        <form method="POST" action="{{ url_for('events.pb_add_question', segment_id=round.id) }}" class="mt-2 ajax-form">
+                            <button type="submit" class="btn btn-sm btn-light py-1 px-3" style="font-size: 0.75rem; border-radius: 6px; font-weight: 700;" onclick="return confirm('Add an extra Sudden Death question to this round?');"><i class="fa-solid fa-plus me-1"></i> 1 Question</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        {% if round.is_active %}
+                            <form method="POST" action="{{ url_for('events.toggle_segment', event_id=event.id, segment_id=round.id) }}" class="ajax-form">
+                                <button type="submit" class="btn btn-danger btn-sm fw-bold glass-effect" style="border-radius: 8px; padding: 8px 16px;" onclick="return confirmStopRound(event);"><i class="fa-solid fa-pause me-1"></i> PAUSE</button>
+                            </form>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('events.toggle_segment', event_id=event.id, segment_id=round.id) }}" class="ajax-form">
+                                <button type="submit" class="btn btn-outline-success btn-sm fw-bold" style="background: white; border-radius: 8px; padding: 8px 16px;" onclick="return confirmStartRound(event);"><i class="fa-solid fa-play me-1"></i> START</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4" style="background: rgba(0,0,0,0.02); border-radius: 10px;">
+                    <i class="fa-solid fa-circle-exclamation mb-2 fa-2x" style="opacity: 0.4;"></i><br>
+                    No rounds configured yet. Go to the Setup tab.
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- THE FIX: Wrapped in an ID so AJAX can find and update it! -->
+            <div id="evaluation-wrapper">
+                {% if active_seg %}
+                <div id="evaluation-container" class="mt-4 p-4 shadow-sm" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px;">
+                    <h6 class="text-success fw-bold mb-2" style="font-size: 1.1rem;"><i class="fa-solid fa-microchip me-2"></i> Engine Evaluation</h6>
+                    <p class="text-sm text-muted mb-3" style="line-height: 1.4;">Checks cutoffs, finalizes ranks, and generates clinchers if ties exist.</p>
+                    <form method="POST" action="{{ url_for('events.pb_evaluate_segment', segment_id=active_seg.id) }}" class="ajax-form">
+                        <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm" style="padding: 10px; font-size: 1.05rem;" onclick="return confirmEvaluateRound(event);">Evaluate Round</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            
+        </div>
+
+        <!-- Right: Live Polling Scoreboard -->
+        <div class="glass-panel" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.06);">
+                <h4 class="m-0 d-flex align-items-center gap-2 fw-bold" style="color: #1e293b;">
+                    <i class="fa-solid fa-circle text-danger fa-beat" style="font-size: 0.6rem;"></i> 
+                    <span id="pbLiveHeader">Waiting for Round...</span>
+                </h4>
+                <span id="pbModeBadge" class="badge bg-secondary" style="padding: 6px 12px; font-size: 0.8rem;">Standby</span>
+            </div>
+            
+            <div class="table-responsive" style="flex: 1;">
+                <table class="table mb-0 align-middle text-center" style="width: 100%; table-layout: fixed;">
+                    <thead style="background: rgba(0,0,0,0.02); border-bottom: 2px solid rgba(0,0,0,0.05);">
+                        <tr>
+                            <th style="width: 70px; color: #64748b; padding: 12px;">Rank</th>
+                            <th class="text-start" style="width: auto; color: #64748b; padding: 12px;">School / Team</th>
+                            <th style="width: 150px; color: #64748b; padding: 12px;">Progress</th>
+                            <th class="text-end" style="width: 90px; color: #64748b; padding: 12px 20px;">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pbLiveBody">
+                        <tr>
+                            <td colspan="4" class="py-5 text-muted text-center" style="background: white;">
+                                <i class="fa-solid fa-ghost fa-3x mb-3" style="opacity:0.2;"></i><br>
+                                Launch a round to begin monitoring real-time progress.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+
+<!-- ========================================== -->
+<!-- TAB 2: CONFIGURATION & SETUP               -->
+<!-- ========================================== -->
+<div id="tab-content-setup" style="display: none;">
+    <div class="admin-grid mb-4">
+        
+        <!-- 1. Segments (Rounds) Setup -->
+        <div class="glass-panel">
+            <div class="panel-header mb-4">
+                <h3 style="margin: 0; color: #1e293b;"><i class="fa-solid fa-layer-group text-primary me-2"></i> Rounds Config</h3>
+            </div>
+            
+            <form id="addSegmentForm" method="POST" action="{{ url_for('events.pb_add_segment', event_id=event.id) }}" class="quick-add-form mb-4 shadow-sm ajax-form" style="background: rgba(59, 130, 246, 0.03);">
+                <div class="row g-2 mb-3">
+                    <div class="col-3"><input type="number" name="order_index" class="form-control" placeholder="Order #" required></div>
+                    <div class="col-9"><input type="text" name="name" class="form-control" placeholder="Round Name (e.g. Easy)" required></div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-4"><input type="number" step="0.1" name="points_per_question" class="form-control" placeholder="Pts/Q" required></div>
+                    <div class="col-4"><input type="number" name="total_questions" class="form-control" placeholder="Items" required></div>
+                    <div class="col-4"><input type="number" name="qualifying_count" class="form-control" placeholder="Top N (0=All)"></div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2">
+                    <div class="form-check m-0">
+                        <input class="form-check-input" type="checkbox" name="is_final" id="pb_is_final" style="width: 18px; height: 18px; cursor: pointer;">
+                        <label class="form-check-label fw-bold ms-1" for="pb_is_final" style="color: var(--danger); cursor: pointer; padding-top: 2px;">Final Round (Clean Slate)</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary fw-bold px-4"><i class="fa-solid fa-plus me-1"></i> Add</button>
+                </div>
+            </form>
+
+            <div id="setup-segments-list" style="display: flex; flex-direction: column; gap: 8px;">
+                {% for seg in event.segments|sort(attribute='order_index') %}
+                <!-- Added data attributes for JS Validation Scanning -->
+                <div class="shadow-sm segment-row" data-id="{{ seg.id }}" data-order="{{ seg.order_index }}" data-name="{{ seg.name|lower|escape }}" data-final="{{ 'true' if seg.is_final else 'false' }}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); background: white;">
+                    <div>
+                        <strong style="color: #1e293b; font-size: 1.05rem;">{{ seg.order_index }}. {{ seg.name }}</strong>
+                        {% if seg.is_final %}<span class="badge bg-danger ms-2 shadow-sm">FINAL</span>{% endif %}
+                        <br>
+                        <small class="text-muted mt-1 d-block"><i class="fa-solid fa-list-ol me-1 text-secondary"></i> {{ seg.total_questions }} Qs &nbsp;|&nbsp; <i class="fa-solid fa-star me-1 text-warning"></i> {{ seg.points_per_question }} Pts &nbsp;|&nbsp; <i class="fa-solid fa-trophy me-1 text-primary"></i> Top {{ seg.qualifying_count if seg.qualifying_count > 0 else 'All' }}</small>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button type="button" class="btn btn-outline-primary btn-sm" style="border: none;" onclick="openEditSegment({{ seg.id }}, {{ seg.order_index }}, '{{ seg.name | replace('\'', '\\\'') }}', {{ seg.points_per_question }}, {{ seg.total_questions }}, {{ seg.qualifying_count }}, '{{ seg.is_final }}')"><i class="fa-solid fa-pen"></i></button>
+                        <form method="POST" action="{{ url_for('events.delete_segment', event_id=event.id, segment_id=seg.id) }}" class="ajax-form d-inline">
+                            <button type="submit" class="btn btn-outline-danger btn-sm" style="border: none;" onclick="return confirm('Are you sure you want to completely delete this round?')"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 2. Teams & Tabulators Setup -->
+        <div class="glass-panel">
+            <div class="panel-header mb-4">
+                <h3 style="margin: 0; color: #1e293b;"><i class="fa-solid fa-users-rectangle text-accent me-2"></i> Teams & Tabulators</h3>
+            </div>
+            
+            <form id="addContestantForm" method="POST" action="{{ url_for('events.pb_add_contestant', event_id=event.id) }}" class="quick-add-form mb-4 shadow-sm ajax-form" style="background: rgba(16, 185, 129, 0.03);">
+                <div class="row g-2 mb-3">
+                    <div class="col-3"><input type="number" name="candidate_number" class="form-control" placeholder="No." required></div>
+                    <div class="col-9"><input type="text" name="name" class="form-control" placeholder="Team / School Name" required></div>
+                </div>
+                <div class="mb-3">
+                    <select name="assigned_judge_id" class="form-select" required>
+                        <option value="" disabled selected>-- Assign Tabulator Account --</option>
+                        {% for judge in eligible_judges %}
+                        <option value="{{ judge.id }}">{{ judge.name or judge.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-success w-100 fw-bold"><i class="fa-solid fa-user-plus me-1"></i> Register Team</button>
+            </form>
+
+            <div id="setup-teams-list" style="display: flex; flex-direction: column; gap: 8px;">
+                {% for c in event.contestants|sort(attribute='candidate_number') %}
+                <!-- Added data attributes for JS Validation Scanning -->
+                <div class="shadow-sm team-row" data-id="{{ c.id }}" data-number="{{ c.candidate_number }}" data-tabulator="{{ c.assigned_judge_id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); background: white;">
+                    <div>
+                        <strong style="color: #1e293b; font-size: 1.05rem;">#{{ c.candidate_number }} {{ c.name }}</strong><br>
+                        <span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; margin-top: 6px;">
+                            <i class="fa-solid fa-user-tie me-1 text-primary"></i> 
+                            {{ c.assigned_judge.name or c.assigned_judge.username }}
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button type="button" class="btn btn-outline-success btn-sm" style="border: none;" onclick="openEditContestant({{ c.id }}, '{{ c.candidate_number }}', '{{ c.name | replace('\'', '\\\'') }}', {{ c.assigned_judge_id }})"><i class="fa-solid fa-pen"></i></button>
+                        <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" class="ajax-form d-inline">
+                            <button type="submit" class="btn btn-outline-danger btn-sm" style="border: none;" onclick="return confirm('Remove this Team and their assigned Tabulator?')"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODALS (EDIT ROUND & EDIT TEAM)            -->
+<!-- ========================================== -->
+
+<!-- Edit Round Modal -->
+<div id="pbEditSegmentModal" class="pb-modal">
+    <div class="pb-modal-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="m-0 fw-bold" style="color: #0f172a;">Edit Round</h4>
+            <button type="button" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; padding: 0;" onclick="closePbModals()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="editSegmentForm" method="POST" action="" class="ajax-form">
+            <div class="row g-2 mb-3">
+                <div class="col-3"><input type="number" name="order_index" class="form-control" placeholder="Order #" required></div>
+                <div class="col-9"><input type="text" name="name" class="form-control" placeholder="Round Name" required></div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-4"><label class="text-xs text-muted">Pts/Q</label><input type="number" step="0.1" name="points_per_question" class="form-control" required></div>
+                <div class="col-4"><label class="text-xs text-muted">Total Qs</label><input type="number" name="total_questions" class="form-control" required></div>
+                <div class="col-4"><label class="text-xs text-muted">Top Advancing</label><input type="number" name="qualifying_count" class="form-control"></div>
+            </div>
+            <div class="form-check mb-4 mt-2">
+                <input class="form-check-input" type="checkbox" name="is_final" id="edit_is_final" style="cursor:pointer;">
+                <label class="form-check-label fw-bold" for="edit_is_final" style="color: var(--danger); cursor:pointer;">Final Round (Clean Slate)</label>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary w-50 fw-bold" onclick="closePbModals()">Cancel</button>
+                <button type="submit" class="btn btn-primary w-50 fw-bold">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Team Modal -->
+<div id="pbEditContestantModal" class="pb-modal">
+    <div class="pb-modal-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="m-0 fw-bold" style="color: #0f172a;">Edit Team</h4>
+            <button type="button" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; padding: 0;" onclick="closePbModals()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="editContestantForm" method="POST" action="" class="ajax-form">
+            <div class="row g-2 mb-3">
+                <div class="col-3"><label class="text-xs text-muted">No.</label><input type="number" name="candidate_number" class="form-control" required></div>
+                <div class="col-9"><label class="text-xs text-muted">Team Name</label><input type="text" name="name" class="form-control" required></div>
+            </div>
+            <div class="mb-4">
+                <label class="text-xs text-muted">Assigned Tabulator</label>
+                <select name="assigned_judge_id" class="form-select" required>
+                    {% for judge in eligible_judges %}
+                    <option value="{{ judge.id }}">{{ judge.name or judge.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary w-50 fw-bold" onclick="closePbModals()">Cancel</button>
+                <button type="submit" class="btn btn-success w-50 fw-bold">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Safe CSS for Edit Modals */
+    .pb-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
+    .pb-modal-content { background: white; border-radius: 14px; width: 100%; max-width: 450px; padding: 25px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); animation: fadeScaleUp 0.2s ease-out forwards; }
+    @keyframes fadeScaleUp { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+</style>
+
+<!-- Custom Vanilla JS Form Hijacking & Engine -->
+<script>
+    window.pbAllFinished = false;
+
+    // Strict validation handlers
+    window.confirmStartRound = function(e) {
+        if(!confirm('LAUNCH ROUND: Are you sure you want to start this round?\n\nAll Tabulators will instantly receive the scoring sheet.')) { e.preventDefault(); return false; }
+        return true;
+    };
+    
+    window.confirmStopRound = function(e) {
+        if (!window.pbAllFinished) {
+            e.preventDefault();
+            if (typeof window.showToast === 'function') window.showToast('error', 'ACTION BLOCKED: Tabulators must reach 100% progress before you can pause/evaluate.');
+            else alert('ACTION BLOCKED: Tabulators must reach 100% progress before you can pause/evaluate.');
+            return false;
+        }
+        if(!confirm('PAUSE ROUND: Are you sure you want to pause this round?')) { e.preventDefault(); return false; }
+        return true;
+    };
+
+    window.confirmEvaluateRound = function(e) {
+        if (!window.pbAllFinished) {
+            e.preventDefault();
+            if (typeof window.showToast === 'function') window.showToast('error', 'ACTION BLOCKED: Tabulators must reach 100% progress to evaluate.');
+            else alert('ACTION BLOCKED: Tabulators must reach 100% progress to evaluate.');
+            return false;
+        }
+        if(!confirm('EVALUATE ROUND: Are you sure you want to run the engine now?\n\nThis will finalize the ranks for this round and close it permanently.')) { 
+            e.preventDefault(); 
+            return false; 
+        }
+        return true;
+    };
+
+    // Modal Controls
+    window.openEditSegment = function(id, order, name, pts, q, top, is_final) {
+        const form = document.getElementById('editSegmentForm');
+        form.action = `/events/{{ event.id }}/pb_edit_segment/${id}`;
+        form.querySelector('[name="order_index"]').value = order;
+        form.querySelector('[name="name"]').value = name;
+        form.querySelector('[name="points_per_question"]').value = pts;
+        form.querySelector('[name="total_questions"]').value = q;
+        form.querySelector('[name="qualifying_count"]').value = top;
+        form.querySelector('[name="is_final"]').checked = (is_final === 'True');
+        document.getElementById('pbEditSegmentModal').style.display = 'flex';
+    };
+
+    window.openEditContestant = function(id, num, name, judgeId) {
+        const form = document.getElementById('editContestantForm');
+        form.action = `/events/{{ event.id }}/pb_edit_contestant/${id}`;
+        form.querySelector('[name="candidate_number"]').value = num;
+        form.querySelector('[name="name"]').value = name;
+        form.querySelector('[name="assigned_judge_id"]').value = judgeId;
+        document.getElementById('pbEditContestantModal').style.display = 'flex';
+    };
+
+    window.closePbModals = function() {
+        document.getElementById('pbEditSegmentModal').style.display = 'none';
+        document.getElementById('pbEditContestantModal').style.display = 'none';
+    };
+
+    // Bulletproof Tab Switcher (With sessionStorage Memory!)
+    window.switchPbTab = function(tabName) {
+        sessionStorage.setItem('pbActiveTab', tabName);
+        const btnMission = document.getElementById('btn-tab-mission');
+        const btnSetup = document.getElementById('btn-tab-setup');
+        const contentMission = document.getElementById('tab-content-mission');
+        const contentSetup = document.getElementById('tab-content-setup');
+
+        if (tabName === 'mission') {
+            contentMission.style.display = 'block'; contentSetup.style.display = 'none';
+            btnMission.className = 'btn btn-primary fw-bold px-4'; btnMission.style.background = 'var(--primary)'; btnMission.style.color = '#fff';
+            btnSetup.className = 'btn btn-outline-secondary fw-bold px-4'; btnSetup.style.background = 'transparent'; btnSetup.style.color = '#64748b';
+        } else {
+            contentMission.style.display = 'none'; contentSetup.style.display = 'block';
+            btnMission.className = 'btn btn-outline-secondary fw-bold px-4'; btnMission.style.background = 'transparent'; btnMission.style.color = '#64748b';
+            btnSetup.className = 'btn btn-primary fw-bold px-4'; btnSetup.style.background = 'var(--primary)'; btnSetup.style.color = '#fff';
+        }
+    };
+
+    // --- SEAMLESS HTMX-STYLE AJAX ENGINE & VALIDATIONS ---
+    window.attachSeamlessAjax = function() {
+        document.querySelectorAll('.ajax-form').forEach(form => {
+            if (form.dataset.ajaxAttached) return;
+            form.dataset.ajaxAttached = "true";
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // === 1. SMART DOM-BASED VALIDATIONS ===
+                let hasError = false;
+
+                // Validation for Segments (Rounds)
+                if (form.id === 'addSegmentForm' || form.id === 'editSegmentForm') {
+                    const formId = form.id === 'editSegmentForm' ? parseInt(form.action.split('/').pop()) : null;
+                    const formOrder = parseInt(form.querySelector('[name="order_index"]').value);
+                    const formName = form.querySelector('[name="name"]').value.trim().toLowerCase();
+                    const formIsFinal = form.querySelector('[name="is_final"]').checked;
+
+                    document.querySelectorAll('.segment-row').forEach(row => {
+                        if (hasError) return;
+                        const rowId = parseInt(row.dataset.id);
+                        if (rowId === formId) return; // Skip self when editing
+
+                        if (parseInt(row.dataset.order) === formOrder) {
+                            if(typeof window.showToast === 'function') window.showToast('error', 'Order # already exists!');
+                            hasError = true;
+                        } else if (row.dataset.name === formName) {
+                            if(typeof window.showToast === 'function') window.showToast('error', 'A round with this name already exists!');
+                            hasError = true;
+                        } else if (formIsFinal && row.dataset.final === 'true') {
+                            if(typeof window.showToast === 'function') window.showToast('error', 'A Final Round already exists! Only 1 is allowed.');
+                            hasError = true;
+                        }
+                    });
+                }
+
+                // Validation for Teams (Contestants)
+                if (form.id === 'addContestantForm' || form.id === 'editContestantForm') {
+                    const formId = form.id === 'editContestantForm' ? parseInt(form.action.split('/').pop()) : null;
+                    const formNum = parseInt(form.querySelector('[name="candidate_number"]').value);
+                    const formTabulator = parseInt(form.querySelector('[name="assigned_judge_id"]').value);
+
+                    document.querySelectorAll('.team-row').forEach(row => {
+                        if (hasError) return;
+                        const rowId = parseInt(row.dataset.id);
+                        if (rowId === formId) return; // Skip self when editing
+
+                        if (parseInt(row.dataset.number) === formNum) {
+                            if(typeof window.showToast === 'function') window.showToast('error', 'Team No. already exists!');
+                            hasError = true;
+                        } else if (parseInt(row.dataset.tabulator) === formTabulator) {
+                            if(typeof window.showToast === 'function') window.showToast('error', 'This Tabulator is already assigned to another team!');
+                            hasError = true;
+                        }
+                    });
+                }
+
+                if (hasError) return; // Abort submission if any validation failed!
+
+                // === 2. AJAX SUBMISSION ===
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalHtml = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                submitBtn.disabled = true;
+
+                try {
+                    const formData = new FormData(form);
+                    await fetch(form.action, { method: form.method, body: formData });
+                    
+                    const res = await fetch(window.location.href);
+                    const html = await res.text();
+                    
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    
+                    // Update Setup Elements
+                    document.getElementById('setup-segments-list').innerHTML = doc.getElementById('setup-segments-list').innerHTML;
+                    document.getElementById('setup-teams-list').innerHTML = doc.getElementById('setup-teams-list').innerHTML;
+                    
+                    // Update Mission Control Elements
+                    document.getElementById('mission-controls-list').innerHTML = doc.getElementById('mission-controls-list').innerHTML;
+                    document.getElementById('evaluation-wrapper').innerHTML = doc.getElementById('evaluation-wrapper').innerHTML;
+                    
+                    closePbModals();
+                    if(form.classList.contains('quick-add-form')) form.reset();
+                    
+                    window.attachSeamlessAjax();
+                    if(typeof window.showToast === 'function') window.showToast('success', 'Update successful!');
+
+                } catch (err) {
+                    console.error("AJAX Error:", err);
+                    if(typeof window.showToast === 'function') window.showToast('error', 'Error applying updates.');
+                } finally {
+                    submitBtn.innerHTML = originalHtml;
+                    submitBtn.disabled = false;
+                }
+            });
+        });
+    };
+
+    // On Load Initializations
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTab = sessionStorage.getItem('pbActiveTab') || 'mission';
+        switchPbTab(savedTab);
+        
+        attachSeamlessAjax();
+
+        // Start the Real-time Mission Control Polling
+        setInterval(() => {
+            if (document.getElementById('tab-content-mission').style.display === 'none') return;
+            fetch(`/events/api/{{ event.id }}/pb_mission_control?_=` + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('pbLiveBody');
+                const header = document.getElementById('pbLiveHeader');
+                const badge = document.getElementById('pbModeBadge');
+                
+                if (data.status === 'no_active_segment') {
+                    header.textContent = 'Waiting for Round...';
+                    badge.className = 'badge bg-secondary'; badge.textContent = 'Standby';
+                    window.pbAllFinished = false;
+                    return;
+                }
+
+                window.pbAllFinished = data.all_finished;
+                header.textContent = `LIVE: ${data.segment_name}`;
+                
+                if (data.show_cumulative) {
+                    badge.className = 'badge bg-warning text-dark shadow-sm';
+                    badge.innerHTML = 'Cumulative <i class="fa-solid fa-plus ms-1"></i>';
+                } else {
+                    badge.className = 'badge bg-danger text-white shadow-sm';
+                    badge.innerHTML = 'Clean Slate <i class="fa-solid fa-bolt ms-1"></i>';
+                }
+
+                let html = '';
+                data.live_scores.forEach(row => {
+                    let iconHtml = '';
+                    if (data.q_count > 0 && row.rank <= data.q_count && !data.segment_name.includes('Clincher')) {
+                        iconHtml = '<i class="fa-solid fa-circle-check text-success ms-2" title="Qualifying Spot"></i>';
+                    }
+
+                    let rowBg = "white";
+                    if (row.row_class.includes('table-warning')) rowBg = "#fffbeb";
+                    else if (row.row_class.includes('table-danger')) rowBg = "#fef2f2";
+                    else if (row.row_class.includes('table-success')) rowBg = "#f0fdf4";
+
+                    let barColorClass = (row.progress_pct >= 100) ? 'bg-primary' : 'bg-success';
+
+                    html += `
+                    <tr style="background: ${rowBg}; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                        <td style="padding: 15px; font-weight: 700; color: #64748b;">${row.rank}</td>
+                        <td class="text-start" style="padding: 15px; font-weight: 700; font-size: 1.05rem; color: #1e293b;">${row.name} ${iconHtml}</td>
+                        <td style="padding: 15px;">
+                            <div class="progress shadow-sm" style="height: 18px; border-radius: 10px; background: rgba(0,0,0,0.05); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
+                                <div class="progress-bar ${barColorClass}" style="width: ${row.progress_pct}%; font-weight: 700; font-size: 0.75rem; color: white;">${row.answered}/${row.total_q}</div>
+                            </div>
+                        </td>
+                        <td class="text-end" style="padding: 15px 20px; font-weight: 700; font-size: 1.25rem; color: #0f172a;">${row.display_score}</td>
+                    </tr>`;
+                });
+                
+                if(data.live_scores.length > 0) tbody.innerHTML = html;
+            })
+            .catch(err => console.log("Engine Sync Error:", err));
+        }, 1500); 
+    });
+</script>

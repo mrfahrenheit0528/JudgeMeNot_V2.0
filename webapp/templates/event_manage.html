@@ -4,12 +4,15 @@
 
 {% block content %}
 <div class="dashboard-container fade-in-up">
-    <!-- Event Header Overview -->
+    
+    <!-- ========================================== -->
+    <!-- UNIVERSAL EVENT HEADER                     -->
+    <!-- ========================================== -->
     <header class="page-header mb-4">
         <div>
             <h2>{{ event.name }}</h2>
             <div class="d-flex align-items-center gap-2 mt-1">
-                <span class="badge bg-secondary text-white px-2 py-1" style="border-radius: 6px; font-size: 0.8rem;">
+                <span class="badge {% if event.event_type == 'Point-Based' %}bg-primary{% else %}bg-secondary{% endif %} text-white px-2 py-1" style="border-radius: 6px; font-size: 0.8rem;">
                     {{ event.event_type }} 
                 </span>
                 <span class="text-muted text-sm ms-2">
@@ -23,7 +26,6 @@
             </div>
         </div>
         <div class="header-actions">
-            <!-- REPLACED history.back() WITH SMART BACK BUTTON ID -->
             <a href="#" id="smartBackButton" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Back</a>
             
             <form method="POST" action="{{ url_for('events.launch', event_id=event.id) }}" style="display:inline;">
@@ -40,40 +42,24 @@
         </div>
     </header>
 
+    <!-- ========================================== -->
+    <!-- DYNAMIC HUB INJECTION                      -->
+    <!-- ========================================== -->
     {% if event.event_type == 'Score-Based' %}
-    
-    <!-- Unified logic for weight calculation handling both 0.3 and 30.0 styles -->
-    {% set ns = namespace(total=0) %}
-    {% for seg in event.segments if not seg.is_final %}
-        {% set w = seg.percentage_weight|float %}
-        {% set ns.total = ns.total + (w * 100 if w <= 1.0 and w > 0 else w) %}
-    {% endfor %}
-    {% set current_total_weight = ns.total | round | int %}
-    
-    {% set has_final_segment = event.segments | selectattr('is_final', 'equalto', True) | list | length > 0 %}
-    {% set has_chairman = event.assigned_judges | selectattr('is_chairman', 'equalto', True) | list | length > 0 %}
-    {% set assigned_judge_ids = event.assigned_judges | map(attribute='judge_id') | list %}
-
-    <div class="admin-grid">
-        <!-- Load the separated HTML partials -->
-        {% include "manage_partials/segments.html" %}
-        {% include "manage_partials/contestants.html" %}
-        {% include "manage_partials/judges.html" %}
-    </div>
-    
+        {% include "manage_partials/score_based_hub.html" %}
+    {% elif event.event_type == 'Point-Based' %}
+        {% include "manage_partials/point_based_hub.html" %}
     {% else %}
-    <!-- Placeholder for Point Based Dashboard details -->
-    <div class="glass-panel mt-4 text-center py-5">
-        <h4><i class="fa-solid fa-flask text-primary"></i> Point-Based Settings</h4>
-        <p class="text-muted">The QuizBee architecture builder is currently down for maintenance.</p>
-    </div>
+        <div class="alert alert-danger text-center shadow-sm">
+            <i class="fa-solid fa-triangle-exclamation"></i> Unknown Event Type.
+        </div>
     {% endif %}
 
 </div>
 
-<!-- ==========================================
-     GLOBAL CUSTOM CSS FOR EVENT MANAGEMENT
-     ========================================== -->
+<!-- ========================================== -->
+<!-- SHARED GLOBAL CSS FOR EVENT MANAGEMENT     -->
+<!-- ========================================== -->
 <style>
     /* Strict Layout architecture */
     .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -93,7 +79,7 @@
     .file-msg { color: var(--text-muted); font-weight: 500; }
     .file-input { position: absolute; left: 0; top: 0; height: 100%; width: 100%; cursor: pointer; opacity: 0; }
 
-    /* Cards & Lists Architecture - STRICTLY ENFORCED ROWS */
+    /* Cards & Lists Architecture */
     .admin-card { background: #ffffff; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s ease; }
     .admin-card.active { border-top: 4px solid var(--success); }
     .admin-card-header { padding: 15px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.01); border-bottom: 1px solid rgba(0,0,0,0.04); }
@@ -142,8 +128,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         const referrer = document.referrer;
         
-        // If the user came from a page that is NOT an event management page (like Dashboard or All Events)
-        // We save it to session storage. If they are just reloading via form submissions, we ignore it!
         if (referrer && !referrer.includes('/events/')) {
             sessionStorage.setItem('smartBackUrl', referrer);
         }
@@ -152,7 +136,6 @@
         if (backBtn) {
             backBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                // Default fallback to the index/dashboard if no history was captured
                 const fallbackUrl = "{{ url_for('index') }}"; 
                 window.location.href = sessionStorage.getItem('smartBackUrl') || fallbackUrl;
             });

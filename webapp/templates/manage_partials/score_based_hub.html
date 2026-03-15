@@ -1,0 +1,19 @@
+<!-- ========================================== -->
+<!-- PAGEANT / SCORE-BASED MANAGER SETUP        -->
+<!-- ========================================== -->
+{% set ns = namespace(total=0) %}
+{% for seg in event.segments if not seg.is_final %}
+    {% set w = seg.percentage_weight|float %}
+    {% set ns.total = ns.total + (w * 100 if w <= 1.0 and w > 0 else w) %}
+{% endfor %}
+{% set current_total_weight = ns.total | round | int %}
+{% set has_final_segment = event.segments | selectattr('is_final', 'equalto', True) | list | length > 0 %}
+{% set has_chairman = event.assigned_judges | selectattr('is_chairman', 'equalto', True) | list | length > 0 %}
+{% set assigned_judge_ids = event.assigned_judges | map(attribute='judge_id') | list %}
+
+<div class="admin-grid">
+    <!-- Load the separated HTML partials specifically for Score-Based events -->
+    {% include "manage_partials/segments.html" %}
+    {% include "manage_partials/contestants.html" %}
+    {% include "manage_partials/judges.html" %}
+</div>

@@ -41,27 +41,29 @@ def get_live_leaderboard(db: Session, event_id: int):
             
     # UPDATED DB LOGIC CHECK
     elif event.event_type == "Point-Based":
+        all_scores = db.query(Score).join(Contestant).filter(Contestant.event_id == event_id).all()
+        
+        # Check if final round exists and has started/finished
+        final_segments = [s for s in event.segments if s.is_final]
+        final_started = any(s.is_active for s in final_segments) or any(sc.segment_id in [s.id for s in final_segments] for sc in all_scores)
+        
         for contestant in contestants:
-            total_points = 0
+            prelim_score = 0
+            final_score = 0
             
-            if event.scoring_type == "cumulative":
-                segments = db.query(Segment).filter(Segment.event_id == event_id, Segment.is_revealed == True).all()
-            elif event.scoring_type == "hybrid" or event.scoring_type == "per_round":
-                active_segment = db.query(Segment).filter(Segment.event_id == event_id, Segment.is_active == True).first()
-                if active_segment and not active_segment.is_final and event.scoring_type == "hybrid":
-                      segments = db.query(Segment).filter(Segment.event_id == event_id, Segment.is_final == False, Segment.is_revealed == True).all()
-                else:
-                    segments = [active_segment] if active_segment else []
-            else:
-                segments = []
+            for segment in event.segments:
+                points_for_segment = len([s for s in all_scores if s.contestant_id == contestant.id and s.segment_id == segment.id and s.is_correct])
+                pts = points_for_segment * segment.points_per_question
                 
-            for segment in segments:
-                points_for_segment = db.query(func.count(Score.id)).filter(
-                    Score.contestant_id == contestant.id,
-                    Score.segment_id == segment.id,
-                    Score.is_correct == True
-                ).scalar() or 0
-                total_points += (points_for_segment * segment.points_per_question)
+                if segment.is_final:
+                    final_score += pts
+                else:
+                    prelim_score += pts
+                    
+            if event.scoring_type == "cumulative":
+                total_points = prelim_score + final_score
+            else:
+                total_points = final_score if final_started else prelim_score
                 
             results.append({
                 "contestant": contestant,

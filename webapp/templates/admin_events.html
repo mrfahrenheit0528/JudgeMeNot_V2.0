@@ -34,7 +34,7 @@
                         <div class="text-muted" style="font-size: 0.8rem; margin-top: 4px;">Created: {{ event.last_active.strftime('%B %d, %Y') if event.last_active else 'N/A' }}</div>
                     </td>
                     <td style="padding: 15px 20px; text-align: center;">
-                        <span class="badge bg-secondary text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">{% if event.event_type == 'PAGEANT' %}Score-Based{% else %}Point-Based{% endif %}</span>
+                        <span class="badge bg-secondary text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">{{ event.event_type }}</span>
                     </td>
                     <td style="padding: 15px 20px; text-align: center;">
                         {% if event.status == 'Ongoing' %}

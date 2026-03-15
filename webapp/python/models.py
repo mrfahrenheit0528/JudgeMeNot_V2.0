@@ -23,7 +23,7 @@ class User(Base):
     
     scores_given = relationship("Score", back_populates="judge")
     audit_logs = relationship("AuditLog", back_populates="user")
-    assigned_schools = relationship("Contestant", back_populates="assigned_tabulator")
+    assigned_schools = relationship("Contestant", back_populates="assigned_judge")
 
 # ---------------------------------------------------------
 # 2. EVENTS
@@ -33,7 +33,7 @@ class Event(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False) 
     
-    # "PAGEANT" or "QUIZBEE"
+    # "PAGEANT" or "QUIZBEE" (Score-Based vs Point-Based)
     event_type = Column(String(20), nullable=False) 
     
     # Used mainly for Quiz Bees: "per_round", "cumulative", "hybrid"
@@ -64,25 +64,24 @@ class Segment(Base):
     is_active = Column(Boolean, default=False)
     is_revealed = Column(Boolean, default=False) 
     is_final = Column(Boolean, default=False) 
-    is_clincher = Column(Boolean, default=False) # For QuizBee tie-breaking rounds
-    qualifier_limit = Column(Integer, default=0) 
     
     # --- Pageant Specific Fields ---
     percentage_weight = Column(Float, default=0.0)
     
     # --- Quiz Bee Specific Fields ---
-    points_per_question = Column(Integer, default=1)
-    total_questions = Column(Integer, default=10)
-    participating_contestant_ids = Column(String(255), nullable=True) # CSV of allowed contestant IDs
+    points_per_question = Column(Float, default=1.0)
+    total_questions = Column(Integer, default=0)
+    qualifying_count = Column(Integer, default=0) 
+    participating_contestants = Column(String(255), nullable=True) # CSV of allowed contestant IDs
     
     event = relationship("Event", back_populates="segments")
     criteria = relationship("Criteria", back_populates="segment", cascade="all, delete-orphan")
     scores = relationship("Score", back_populates="segment", cascade="all, delete-orphan")
     
     def is_contestant_allowed(self, contestant_id):
-        if not self.participating_contestant_ids:
+        if not self.participating_contestants:
             return True
-        allowed_list = self.participating_contestant_ids.split(',')
+        allowed_list = self.participating_contestants.split(',')
         return str(contestant_id) in allowed_list
 
 # ---------------------------------------------------------
@@ -115,14 +114,14 @@ class Contestant(Base):
     status = Column(String(20), default='Active') 
     image_path = Column(String(255), nullable=True) 
     
-    # For Quiz Bee: A Tabulator might be assigned to score a specific school
-    assigned_tabulator_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    # --- Quiz Bee Specific Fields ---
+    # Strict 1-to-1 relationship for Tabulators
+    assigned_judge_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     
     event = relationship("Event", back_populates="contestants")
     scores = relationship("Score", back_populates="contestant", cascade="all, delete-orphan")
-    assigned_tabulator = relationship("User", back_populates="assigned_schools")
+    assigned_judge = relationship("User", back_populates="assigned_schools")
 
-    # Ensure names are unique within the same event
     __table_args__ = (
         UniqueConstraint('name', 'event_id', name='unique_contestant_per_event'),
     )

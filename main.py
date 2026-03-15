@@ -40,8 +40,13 @@ def create_app(test_config=None):
     app.register_blueprint(leaderboard_bp)                
     app.register_blueprint(scores_bp)  
     
-    from webapp.python.models import Event, Contestant, EventJudge
-    from webapp.python.database import SessionLocal
+    from webapp.python.models import Event, Contestant, EventJudge, Base
+    from webapp.python.database import SessionLocal, engine
+    
+    # =========================================================
+    # CREATE ALL MISSING DATABASE TABLES AUTOMATICALLY
+    # =========================================================
+    Base.metadata.create_all(bind=engine)
     
     @app.route('/')
     @require_role()
@@ -49,16 +54,24 @@ def create_app(test_config=None):
         user = session.get('user')
         db = SessionLocal()
         try:
-            if user['role'] == 'judge':
+            if user['role'] == 'judge' or user['role'] == 'tabulator':
                 # Fetch events assigned to this specific judge
                 assignments = db.query(EventJudge).filter(EventJudge.judge_id == user['id']).all()
                 assigned_event_ids = [a.event_id for a in assignments]
+                
+                # Fetch Pageant (Score-Based) Events
                 events = db.query(Event).filter(Event.id.in_(assigned_event_ids)).all()
                 
-                return render_template('judge_dashboard.html', title="Judge Dashboard", events=events)
+                # Fetch Quiz Bee (Point-Based) Events
+                # Find contestants this tabulator is assigned to
+                pb_assignments = db.query(Contestant).filter(Contestant.assigned_judge_id == user['id']).all()
+                pb_event_ids = [c.event_id for c in pb_assignments]
+                pb_events = db.query(Event).filter(Event.id.in_(pb_event_ids)).all()
                 
-            elif user['role'] == 'tabulator':
-                return "Tabulator Dashboard Placeholder"
+                # Combine unique events
+                all_assigned_events = list({e.id: e for e in (events + pb_events)}.values())
+                
+                return render_template('judge_dashboard.html', title="Judge Dashboard", events=all_assigned_events)
                 
             # Admin / Admin-Viewer scope
             active_events_count = db.query(Event).filter(Event.status == 'Ongoing').count()

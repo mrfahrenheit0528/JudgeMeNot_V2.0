@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Scoring: {{ segment.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up" style="max-width: 800px; margin: 0 auto; padding-top: 20px; padding-bottom: 60px;">
+    
+    <!-- Dynamic Header (Bulletproof Alignment & Spacing) -->
+    <header class="shadow-sm" style="background: white; border-radius: 12px; border-left: 6px solid var(--primary); display: flex; justify-content: space-between; align-items: center; padding: 25px 30px; margin-bottom: 35px; flex-wrap: wrap; gap: 20px; overflow: hidden;">
+        
+        <!-- Left Side: Title and Badges -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <h2 style="margin: 0; font-weight: 800; color: #0f172a; font-size: 1.8rem; letter-spacing: -0.5px;">{{ contestant.name }}</h2>
+            
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <span style="background: rgba(59, 130, 246, 0.1); color: var(--primary); border: 1px solid rgba(59, 130, 246, 0.2); padding: 6px 14px; border-radius: 8px; font-size: 0.9rem; font-weight: 700;">
+                    <i class="fa-solid fa-layer-group me-1"></i> {{ segment.name }}
+                </span>
+                <span style="background: #f8fafc; color: #475569; padding: 6px 14px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; border: 1px solid #e2e8f0;">
+                    <i class="fa-solid fa-star text-warning me-1"></i> {{ segment.points_per_question }} Pts / Q
+                </span>
+                <!-- Dynamic Auto-Save Indicator -->
+                <span id="saveStatusBadge" style="background: #f8fafc; color: #64748b; padding: 6px 14px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; border: 1px solid #e2e8f0; transition: all 0.3s ease;">
+                    <i class="fa-solid fa-cloud me-1"></i> Synced
+                </span>
+            </div>
+        </div>
+
+        <!-- Right Side: Custom Exit Button -->
+        <a href="{{ url_for('index') }}" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: white; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.95rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: all 0.2s ease;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='white'; this.style.color='#475569'; this.style.borderColor='#cbd5e1';">
+            <i class="fa-solid fa-arrow-left"></i> Exit Scoring
+        </a>
+    </header>
+
+    <!-- Scoring Form -->
+    <form id="pbScoringForm" method="POST">
+        <!-- Increased gap from 12px to 18px for better breathing room -->
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+            {% for q in range(1, segment.total_questions + 1) %}
+            <div class="shadow-sm" style="background: white; border-radius: 10px; padding: 15px 20px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; border: 1px solid rgba(0,0,0,0.05);">
+                
+                <!-- Left: Question Indicator -->
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="q-bubble">
+                        {{ q }}
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <h5 class="m-0 fw-bold" style="color: #1e293b; font-size: 1.05rem;">Question #{{ q }}</h5>
+                    </div>
+                </div>
+
+                <!-- Right: Custom Toggle Buttons -->
+                <div style="display: flex; align-items: center;">
+                    
+                    <!-- CORRECT -->
+                    <input type="radio" class="pb-radio-input" name="question_{{ q }}" id="q{{ q }}_correct" value="correct" {% if score_map.get(q) == True %}checked{% endif %}>
+                    <label class="pb-radio-label correct-btn" for="q{{ q }}_correct">
+                        <i class="fa-solid fa-check me-1"></i> Correct
+                    </label>
+
+                    <!-- WRONG -->
+                    <input type="radio" class="pb-radio-input" name="question_{{ q }}" id="q{{ q }}_wrong" value="wrong" {% if score_map.get(q) == False %}checked{% endif %}>
+                    <label class="pb-radio-label wrong-btn" for="q{{ q }}_wrong">
+                        <i class="fa-solid fa-xmark me-1"></i> Wrong
+                    </label>
+                    
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </form>
+</div>
+
+<!-- Auto-Lock Modal Overlay -->
+<div id="roundLockedModal" class="modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div class="text-center p-5 shadow-lg" style="background: white; border-radius: 16px; max-width: 450px; border-top: 6px solid var(--danger);">
+        <i class="fa-solid fa-lock text-danger fa-4x mb-4"></i>
+        <h3 class="fw-bold mb-3" style="color: #0f172a;">Round Locked</h3>
+        <p class="text-muted mb-4">The administrator has paused or ended this round. Scoring is currently disabled.</p>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary w-100 fw-bold py-3" style="border-radius: 8px;">Return to Dashboard</a>
+    </div>
+</div>
+
+<style>
+    /* CSS-Proof Radio Button Styling */
+    .pb-radio-input { display: none !important; }
+
+    .pb-radio-label {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 8px 18px !important; 
+        font-size: 0.9rem !important; 
+        font-weight: 700 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        margin: 0 !important;
+        border: 1px solid transparent !important;
+        user-select: none !important;
+    }
+
+    /* Correct Button (Blue Theme) */
+    .pb-radio-label.correct-btn {
+        background: rgba(59, 130, 246, 0.08) !important;
+        color: var(--primary) !important;
+        border-color: rgba(59, 130, 246, 0.2) !important;
+        border-radius: 6px 0 0 6px !important; 
+    }
+    .pb-radio-label.correct-btn:hover { background: rgba(59, 130, 246, 0.15) !important; }
+    .pb-radio-input:checked + .pb-radio-label.correct-btn {
+        background: var(--primary) !important;
+        color: white !important;
+        border-color: var(--primary) !important;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.15) !important;
+        position: relative !important;
+        z-index: 2 !important;
+    }
+
+    /* Wrong Button (Slate/Neutral Theme) */
+    .pb-radio-label.wrong-btn {
+        background: #f8fafc !important;
+        color: #64748b !important;
+        border-color: #e2e8f0 !important;
+        border-radius: 0 6px 6px 0 !important;
+        margin-left: -1px !important; /* Pull left to overlap borders neatly */
+    }
+    .pb-radio-label.wrong-btn:hover { background: #f1f5f9 !important; color: #475569 !important; }
+    .pb-radio-input:checked + .pb-radio-label.wrong-btn {
+        background: #64748b !important;
+        color: white !important;
+        border-color: #64748b !important;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.15) !important;
+        position: relative !important;
+        z-index: 2 !important; 
+    }
+
+    /* Bulletproof Bubble */
+    .q-bubble {
+        width: 38px !important; 
+        height: 38px !important;
+        background: #f8fafc !important;
+        color: #64748b !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        border: 2px solid #e2e8f0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+        .pb-radio-label { padding: 8px 12px !important; font-size: 0.85rem !important; }
+        .q-bubble { width: 32px !important; height: 32px !important; font-size: 0.95rem !important; }
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const radios = document.querySelectorAll('.pb-radio-input');
+        const form = document.getElementById('pbScoringForm');
+        let saveTimeout;
+
+        // Function to visually update the Auto-Save badge
+        function updateSaveStatus(state) {
+            const badge = document.getElementById('saveStatusBadge');
+            clearTimeout(saveTimeout);
+            
+            if (state === 'saving') {
+                badge.style.background = 'rgba(59, 130, 246, 0.1)';
+                badge.style.color = 'var(--primary)';
+                badge.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Saving...';
+            } else if (state === 'saved') {
+                badge.style.background = '#f0fdf4';
+                badge.style.color = '#16a34a';
+                badge.style.borderColor = '#bbf7d0';
+                badge.innerHTML = '<i class="fa-solid fa-check-double me-1"></i> Saved';
+                
+                saveTimeout = setTimeout(() => {
+                    badge.style.background = '#f8fafc';
+                    badge.style.color = '#64748b';
+                    badge.style.borderColor = '#e2e8f0';
+                    badge.innerHTML = '<i class="fa-solid fa-cloud me-1"></i> Synced';
+                }, 2500);
+            } else if (state === 'error') {
+                badge.style.background = '#fef2f2';
+                badge.style.color = '#ef4444';
+                badge.style.borderColor = '#fecaca';
+                badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> Error';
+            }
+        }
+
+        radios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                updateSaveStatus('saving');
+                
+                const formData = new FormData(form);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) updateSaveStatus('saved');
+                    else updateSaveStatus('error');
+                })
+                .catch(error => {
+                    console.error("Save Error:", error);
+                    updateSaveStatus('error');
+                });
+            });
+        });
+
+        const currentSegmentId = {{ segment.id }};
+        const currentTotalQs = {{ segment.total_questions }};
+
+        // Real-time Round Lock & Question Polling
+        setInterval(() => {
+            fetch(`/judge/api/status?_=` + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                const eventStatus = data['{{ event.id }}'];
+                
+                // 1. If event is paused entirely
+                if (!eventStatus || eventStatus.status !== 'Ongoing') {
+                    document.getElementById('roundLockedModal').style.display = 'flex';
+                    document.querySelectorAll('input, button').forEach(el => el.disabled = true);
+                    return;
+                }
+
+                // 2. A NEW round was activated (e.g. Clincher round started!)
+                if (eventStatus.active_segment_id && eventStatus.active_segment_id !== currentSegmentId) {
+                    // Instantly auto-redirect the tabulator to the new segment
+                    window.location.href = `/judge/pb_scoring/{{ event.id }}/${eventStatus.active_segment_id}`;
+                    return;
+                }
+
+                // 3. Current round was paused
+                if (!eventStatus.active_segment_id) {
+                    document.getElementById('roundLockedModal').style.display = 'flex';
+                    document.querySelectorAll('input, button').forEach(el => el.disabled = true);
+                    return;
+                }
+
+                // 4. Admin added a "+1 Question" to the current round!
+                if (eventStatus.active_segment_id === currentSegmentId && eventStatus.total_questions > currentTotalQs) {
+                    // Silently save any pending toggles, then reload to show the new question
+                    window.location.reload();
+                }
+            })
+            .catch(err => console.error("Sync Error:", err));
+        }, 2000);
+    });
+</script>
+{% endblock %}

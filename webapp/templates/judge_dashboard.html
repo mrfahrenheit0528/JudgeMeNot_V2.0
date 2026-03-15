@@ -13,7 +13,8 @@
 
     <div class="events-grid mt-4">
         {% for event in events %}
-        <div class="event-card glass-panel {% if event.status == 'Ongoing' %}status-live{% else %}status-paused{% endif %}" id="event_card_{{ event.id }}">
+        <!-- Added data-event-type for the JS polling script -->
+        <div class="event-card glass-panel {% if event.status == 'Ongoing' %}status-live{% else %}status-paused{% endif %}" id="event_card_{{ event.id }}" data-event-type="{{ event.event_type }}">
             
             <div class="card-top-row">
                 <!-- Left Side: Event Details -->
@@ -35,7 +36,9 @@
                     
                     {% if event.status == 'Ongoing' and active_segments|length > 0 %}
                         {% set active_seg = active_segments[0] %}
-                        <a href="{{ url_for('judge.scoring', event_id=event.id, segment_id=active_seg.id) }}" class="btn btn-primary btn-score-now pulse-btn">
+                        <!-- Conditionally route to pb_scoring or normal scoring -->
+                        {% set score_route = 'judge.pb_scoring' if event.event_type == 'Point-Based' else 'judge.scoring' %}
+                        <a href="{{ url_for(score_route, event_id=event.id, segment_id=active_seg.id) }}" class="btn btn-primary btn-score-now pulse-btn">
                             <i class="fa-solid fa-pen-nib"></i> Score Now <span class="sub-text">({{ active_seg.name }})</span>
                         </a>
                     {% elif event.status == 'Ongoing' %}
@@ -70,12 +73,14 @@
                             {{ segment.order_index }}. {{ segment.name }}
                         </div>
                         
-                        <!-- Inline Weight -->
-                        {% if segment.percentage_weight %}
-                            <div class="seg-weight">
+                        <!-- Inline Specifics -->
+                        <div class="seg-weight">
+                            {% if event.event_type == 'Point-Based' %}
+                                {{ segment.total_questions }} Qs | {{ segment.points_per_question }} Pts
+                            {% elif segment.percentage_weight %}
                                 {{ (segment.percentage_weight)|int }}%
-                            </div>
-                        {% endif %}
+                            {% endif %}
+                        </div>
                         
                         <!-- Final Badge -->
                         {% if segment.is_final %}
@@ -101,207 +106,58 @@
 
 <style>
     /* Strict Layout Structure */
-    .dashboard-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    .events-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 25px;
-    }
-
-    /* Event Card Architecture */
-    .event-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 30px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.02), 0 10px 15px rgba(0,0,0,0.03);
-        border: 1px solid rgba(0,0,0,0.06);
-        display: flex;
-        flex-direction: column;
-        gap: 25px;
-        transition: border-color 0.3s ease;
-    }
-
-    /* Status Indicators */
+    .dashboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .events-grid { display: flex; flex-direction: column; gap: 25px; }
+    .event-card { background: #ffffff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02), 0 10px 15px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 25px; transition: border-color 0.3s ease; }
     .status-live { border-top: 5px solid var(--success, #10b981); }
     .status-paused { border-top: 5px solid var(--warning, #f59e0b); }
-
-    /* Top Row Layout */
-    .card-top-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 20px;
-        flex-wrap: wrap; /* Allows stacking on very small mobile screens */
-    }
-
-    .event-details {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .event-title {
-        margin: 0;
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: var(--text-bright, #0f172a);
-    }
-
-    .event-meta {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    .badge-status {
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: white;
-        transition: background-color 0.3s ease;
-    }
+    .card-top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+    .event-details { display: flex; flex-direction: column; gap: 10px; }
+    .event-title { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--text-bright, #0f172a); }
+    .event-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .badge-status { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; color: white; transition: background-color 0.3s ease; }
     .badge-status.live { background: var(--success, #10b981); }
     .badge-status.paused { background: var(--warning, #f59e0b); }
-
-    .meta-text {
-        font-size: 0.95rem;
-        color: var(--text-muted, #64748b);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    /* Action Button Area */
-    .event-action {
-        flex-shrink: 0;
-    }
-
-    .btn-score-now {
-        border-radius: 30px;
-        font-weight: bold;
-        padding: 12px 28px;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 1.05rem;
-    }
-    
-    .btn-score-now .sub-text {
-        font-weight: 400;
-        opacity: 0.8;
-        font-size: 0.9em;
-    }
-
-    /* Segment List Architecture */
-    .segments-list {
-        display: flex;
-        flex-direction: column;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        border-top: 1px solid rgba(0,0,0,0.06);
-    }
-
-    .segment-item {
-        display: flex;
-        align-items: center;
-        padding: 15px 0;
-        border-bottom: 1px solid rgba(0,0,0,0.04);
-        gap: 15px;
-    }
-    
-    .segment-item:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-    }
-
-    .seg-icon {
-        width: 20px;
-        display: flex;
-        justify-content: center;
-    }
-
-    .seg-name {
-        font-weight: 700;
-        font-size: 1.05rem;
-        color: var(--text-bright, #0f172a);
-        transition: color 0.3s ease;
-    }
-    .seg-name.inactive {
-        color: var(--text-muted, #64748b);
-        font-weight: 500;
-    }
-
-    .seg-weight {
-        font-size: 0.9rem;
-        color: var(--text-muted, #64748b);
-        font-weight: 600;
-        margin-left: auto; /* This pushes the weight to the far right */
-    }
-
-    .badge-final {
-        background: var(--danger, #ef4444);
-        color: white;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-
-    .empty-state {
-        color: var(--text-muted, #64748b);
-        font-style: italic;
-        margin: 0;
-        padding-top: 15px;
-        border-top: 1px solid rgba(0,0,0,0.06);
-    }
-
-    /* Custom Animations */
-    @keyframes pulse-btn {
-        0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-        70% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-    }
-    .pulse-btn {
-        animation: pulse-btn 2s infinite;
-    }
+    .meta-text { font-size: 0.95rem; color: var(--text-muted, #64748b); display: flex; align-items: center; gap: 6px; }
+    .event-action { flex-shrink: 0; }
+    .btn-score-now { border-radius: 30px; font-weight: bold; padding: 12px 28px; display: inline-flex; align-items: center; gap: 8px; font-size: 1.05rem; }
+    .btn-score-now .sub-text { font-weight: 400; opacity: 0.8; font-size: 0.9em; }
+    .segments-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-top: 1px solid rgba(0,0,0,0.06); }
+    .segment-item { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid rgba(0,0,0,0.04); gap: 15px; }
+    .segment-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .seg-icon { width: 20px; display: flex; justify-content: center; }
+    .seg-name { font-weight: 700; font-size: 1.05rem; color: var(--text-bright, #0f172a); transition: color 0.3s ease; }
+    .seg-name.inactive { color: var(--text-muted, #64748b); font-weight: 500; }
+    .seg-weight { font-size: 0.9rem; color: var(--text-muted, #64748b); font-weight: 600; margin-left: auto; }
+    .badge-final { background: var(--danger, #ef4444); color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .empty-state { color: var(--text-muted, #64748b); font-style: italic; margin: 0; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.06); }
+    @keyframes pulse-btn { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); } 70% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
+    .pulse-btn { animation: pulse-btn 2s infinite; }
 </style>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        
-        // Run the background check every 3 seconds
         setInterval(() => {
-            // Fetch live statuses of ALL assigned events (using timestamp cache-buster)
             fetch(`/judge/api/status?_=` + new Date().getTime())
             .then(res => res.json())
             .then(data => {
-                
-                // Loop through every event returned by the API
                 for (const [eventId, eventData] of Object.entries(data)) {
                     
-                    // 1. UPDATE THE EVENT CARD BORDER STATUS
                     const card = document.getElementById('event_card_' + eventId);
-                    if (card) {
-                        if (eventData.status === 'Ongoing') {
-                            card.classList.add('status-live');
-                            card.classList.remove('status-paused');
-                        } else {
-                            card.classList.add('status-paused');
-                            card.classList.remove('status-live');
-                        }
+                    if (!card) continue;
+                    
+                    const eventType = card.dataset.eventType;
+
+                    if (eventData.status === 'Ongoing') {
+                        card.classList.add('status-live');
+                        card.classList.remove('status-paused');
+                    } else {
+                        card.classList.add('status-paused');
+                        card.classList.remove('status-live');
                     }
 
-                    // 2. UPDATE THE BADGE STATUS
                     const badge = document.getElementById('badge_status_' + eventId);
                     if (badge) {
                         if (eventData.status === 'Ongoing') {
@@ -313,12 +169,16 @@
                         }
                     }
 
-                    // 3. UPDATE THE GLOBAL ACTION BUTTON
                     const btnContainer = document.getElementById('event_action_' + eventId);
                     if (btnContainer) {
                         if (eventData.status === 'Ongoing' && eventData.active_segment_id) {
+                            // NEW: Route to the correct scoring UI based on Event Type!
+                            const scoreUrl = eventType === 'Point-Based' 
+                                ? `/judge/pb_scoring/${eventId}/${eventData.active_segment_id}`
+                                : `/judge/scoring/${eventId}/${eventData.active_segment_id}`;
+
                             btnContainer.innerHTML = `
-                                <a href="/judge/scoring/${eventId}/${eventData.active_segment_id}" class="btn btn-primary btn-score-now pulse-btn">
+                                <a href="${scoreUrl}" class="btn btn-primary btn-score-now pulse-btn">
                                     <i class="fa-solid fa-pen-nib"></i> Score Now <span class="sub-text">(${eventData.active_segment_name})</span>
                                 </a>
                             `;
@@ -337,18 +197,15 @@
                         }
                     }
 
-                    // 4. UPDATE INDIVIDUAL SEGMENT ICONS IN THE LIST
                     document.querySelectorAll(`.seg-item-event-${eventId}`).forEach(item => {
                         const segId = parseInt(item.dataset.segmentId);
                         const iconDiv = item.querySelector('.seg-icon');
                         const nameDiv = item.querySelector('.seg-name');
                         
                         if (eventData.status === 'Ongoing' && segId === eventData.active_segment_id) {
-                            // Target segment is currently active
                             iconDiv.innerHTML = '<i class="fa-solid fa-play text-success" title="Currently Active"></i>';
                             nameDiv.classList.remove('inactive');
                         } else {
-                            // Target segment is inactive or event is paused
                             iconDiv.innerHTML = '<i class="fa-solid fa-circle text-muted" style="font-size: 0.5rem; opacity: 0.4;"></i>';
                             nameDiv.classList.add('inactive');
                         }
@@ -356,7 +213,7 @@
                 }
             })
             .catch(err => console.error("Polling error:", err));
-        }, 3000); // 3000ms = 3 seconds
+        }, 3000); 
     });
 </script>
 {% endblock %}
