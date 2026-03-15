@@ -6,7 +6,13 @@
     
     <!-- Quick Add Form -->
     <form method="POST" action="{{ url_for('events.add_segment', event_id=event.id) }}" class="quick-add-form" id="addSegmentForm" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 12px; width: 100%;">
-        <input type="number" step="1" min="1" max="100" name="percentage_weight" id="segWeightInput" class="form-control form-control-sm text-center" placeholder="% Wt" style="width: 70px; flex-shrink: 0;" required>
+        
+        <!-- Dynamic Input Container: Swaps between Weight and Top N -->
+        <div style="position: relative; width: 85px; flex-shrink: 0;">
+            <input type="number" step="1" min="1" max="100" name="percentage_weight" class="form-control form-control-sm text-center" placeholder="% Wt" required>
+            <input type="number" step="1" min="1" name="qualifying_count" class="form-control form-control-sm text-center" placeholder="Top N" style="display: none;" disabled title="Number of Advancing Qualifiers per Category">
+        </div>
+
         <input type="text" name="name" class="form-control form-control-sm" placeholder="New segment name (e.g. Swimwear)" style="flex: 1; min-width: 0;" required>
         
         <div class="form-check-custom" style="flex: 0 0 auto; white-space: nowrap; display: flex; align-items: center; gap: 5px;">
@@ -27,6 +33,9 @@
                     <div class="badges mt-1">
                         {% if segment.is_final %}
                             <span class="badge bg-danger text-white">Final Round</span>
+                            {% if segment.qualifying_count and segment.qualifying_count > 0 %}
+                                <span class="badge bg-warning text-dark ms-1">Top {{ segment.qualifying_count }} Qualifiers</span>
+                            {% endif %}
                         {% elif segment.percentage_weight %}
                             {% set w = segment.percentage_weight|float %}
                             {% set d_weight = (w * 100) if w <= 1.0 and w > 0 else w %}
@@ -51,17 +60,15 @@
                 <div class="admin-card-actions">
                     <form method="POST" action="{{ url_for('events.toggle_segment', event_id=event.id, segment_id=segment.id) }}" style="display:inline;">
                         {% if segment.is_active %}
-                            <!-- Changed type="submit" to type="button" to prevent native form reload -->
-                            <button type="button" class="btn-icon text-warning" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'deactivate')" title="Deactivate Segment"><i class="fa-solid fa-pause"></i></button>
+                            <!-- THE FIX: Passes Top N Qualifiers parameter to JS Engine -->
+                            <button type="button" class="btn-icon text-warning" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'deactivate', {{ 'true' if segment.is_final else 'false' }}, {{ segment.qualifying_count or 0 }})" title="Deactivate Segment"><i class="fa-solid fa-pause"></i></button>
                         {% else %}
-                            <!-- Changed type="submit" to type="button" to prevent native form reload -->
-                            <button type="button" class="btn-icon text-success" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'activate')" title="Activate Segment"><i class="fa-solid fa-play"></i></button>
+                            <button type="button" class="btn-icon text-success" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'activate', {{ 'true' if segment.is_final else 'false' }}, {{ segment.qualifying_count or 0 }})" title="Activate Segment"><i class="fa-solid fa-play"></i></button>
                         {% endif %}
                     </form>
                     <button type="button" class="btn-icon text-secondary" onclick="document.getElementById('editSegmentModal_{{ segment.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
                     <button type="button" class="btn-icon text-primary" onclick="document.getElementById('addCriteriaModal_{{ segment.id }}').style.display='flex'"><i class="fa-solid fa-list-check"></i></button>
                     <form method="POST" action="{{ url_for('events.delete_segment', event_id=event.id, segment_id=segment.id) }}" style="display:inline;">
-                        <!-- Changed type="submit" to type="button" for delete security -->
                         <button type="button" class="btn-icon text-danger" onclick="promptDeactivate(event, this.form, 'Are you sure you want to permanently DELETE this segment?')" title="Delete Segment"><i class="fa-solid fa-trash"></i></button>
                     </form>
                 </div>
@@ -113,7 +120,11 @@
         <form method="POST" action="{{ url_for('events.edit_segment', event_id=event.id, segment_id=segment.id) }}" class="edit-segment-form" data-original-weight="{{ s_weight }}">
             <div class="mb-3"><label class="form-label">Name</label><input type="text" name="name" class="form-control" value="{{ segment.name }}" required></div>
             <div class="row g-2 mb-4">
-                <div class="col-8"><label class="form-label">% Weight</label><input type="number" name="percentage_weight" class="form-control" value="{{ s_weight }}" {% if segment.is_final %}disabled{% endif %}></div>
+                <div class="col-8">
+                    <label class="form-label">Weight / Top N</label>
+                    <input type="number" name="percentage_weight" class="form-control" value="{{ s_weight }}" placeholder="% Weight" {% if segment.is_final %}disabled style="display:none;"{% endif %}>
+                    <input type="number" name="qualifying_count" class="form-control" value="{{ segment.qualifying_count or '' }}" placeholder="Top N Qualifiers" {% if not segment.is_final %}disabled style="display:none;"{% endif %}>
+                </div>
                 <div class="col-4 d-flex align-items-end"><div class="form-check-custom"><input type="checkbox" name="is_final" id="is_final_edit_{{ segment.id }}" onchange="toggleWeightInput(this)" {% if segment.is_final %}checked{% endif %} {% if has_final_segment and not segment.is_final %}disabled{% endif %}><label for="is_final_edit_{{ segment.id }}">Final?</label></div></div>
             </div>
             <button type="submit" class="btn btn-primary w-100">Save Changes</button>
@@ -162,27 +173,88 @@
 {% endfor %}
 
 <script>
-    if (typeof window.toggleWeightInput !== 'function') {
-        window.toggleWeightInput = function(checkbox) {
-            const form = checkbox.closest('form');
-            const weightInput = form.querySelector('input[name="percentage_weight"]');
-            if (checkbox.checked) { weightInput.value = ''; weightInput.disabled = true; } else { weightInput.disabled = false; }
-        };
-    }
-
-    // --- NEW: SMART REAL-TIME TOGGLE MODAL ---
-    // Moved globally outside DOMContentLoaded so it is unconditionally available upon click
-    window.promptSegmentToggle = function(e, formElement, eventId, segmentId, action) {
-        if (e) e.preventDefault(); // Stop immediate submission
+    window.toggleWeightInput = function(checkbox) {
+        const form = checkbox.closest('form');
+        const weightInput = form.querySelector('input[name="percentage_weight"]');
+        const qualInput = form.querySelector('input[name="qualifying_count"]');
         
-        // Instantly Fetch the absolute latest status from the API when button is clicked
-        // Append a timestamp parameter to prevent aggressive browser caching
+        if (checkbox.checked) { 
+            if(weightInput) { weightInput.value = ''; weightInput.disabled = true; weightInput.style.display = 'none'; weightInput.required = false; }
+            if(qualInput) { qualInput.disabled = false; qualInput.style.display = 'block'; qualInput.required = true; }
+        } else { 
+            if(weightInput) { weightInput.disabled = false; weightInput.style.display = 'block'; weightInput.required = true; }
+            if(qualInput) { qualInput.value = ''; qualInput.disabled = true; qualInput.style.display = 'none'; qualInput.required = false;}
+        }
+    };
+
+    // --- THE FIX: Enhanced Prompt Toggle with Live Qualifiers Preview ---
+    window.promptSegmentToggle = function(e, formElement, eventId, segmentId, action, isFinal = false, topN = 0) {
+        if (e) e.preventDefault(); 
+        
         fetch(`/events/api/${eventId}/status?_=` + new Date().getTime())
             .then(res => res.json())
             .then(data => {
                 const prog = data.progress[segmentId];
                 let msg = "";
                 
+                // FINAL ROUND LAUNCH LOGIC
+                if (action === 'activate' && isFinal) {
+                    let allPrelimsDone = true;
+                    let pendingCount = 0;
+                    
+                    for (const [sId, p] of Object.entries(data.progress)) {
+                        if (parseInt(sId) !== segmentId) {
+                            if (p.total > 0 && p.submitted < p.total) {
+                                allPrelimsDone = false;
+                                pendingCount += (p.total - p.submitted);
+                            }
+                        }
+                    }
+                    
+                    // PREVENT LAUNCH IF JUDGES AREN'T FINISHED
+                    if (!allPrelimsDone) {
+                        const errorMsg = `ACTION BLOCKED: You cannot launch the Final Round yet! There are still ${pendingCount} pending judge submissions in the preliminary rounds.`;
+                        if(typeof showToast === 'function') showToast('error', errorMsg);
+                        else alert(errorMsg);
+                        return; 
+                    }
+
+                    // FETCH AND RENDER QUALIFIERS PREVIEW
+                    fetch(`/leaderboard/api/${eventId}?_=` + new Date().getTime())
+                        .then(resLb => resLb.json())
+                        .then(lbData => {
+                            let qualifierHTML = `<div class="mt-3 mb-3 p-3 rounded" style="background: rgba(248, 250, 252, 0.9); border: 1px solid #e2e8f0; max-height: 250px; overflow-y: auto; text-align: left;">
+                                <h6 class="text-primary mb-2 fw-bold" style="font-size: 0.95rem;"><i class="fa-solid fa-trophy me-1"></i> Official Qualifiers (Top ${topN > 0 ? topN : 'All'})</h6>`;
+                            
+                            Object.keys(lbData.leaderboard).sort().forEach(cat => {
+                                const contestants = lbData.leaderboard[cat];
+                                const qualifiers = topN > 0 ? contestants.slice(0, topN) : contestants;
+                                
+                                if (Object.keys(lbData.leaderboard).length > 1 || cat !== "Overall") {
+                                    qualifierHTML += `<strong class="d-block mt-2 mb-1" style="color: #334155; font-size: 0.85rem; text-transform: uppercase;">${cat} Category</strong>`;
+                                }
+                                qualifierHTML += `<ul class="list-unstyled mb-2 ms-2" style="font-size: 0.9rem;">`;
+                                if(qualifiers.length === 0) {
+                                    qualifierHTML += `<li class="text-muted text-sm fst-italic">No contestants found.</li>`;
+                                }
+                                qualifiers.forEach(q => {
+                                    qualifierHTML += `<li style="padding: 3px 0; border-bottom: 1px dashed rgba(0,0,0,0.05);"><strong style="color: #0f172a;">#${q.candidate_number}</strong> - ${q.name} <span class="text-success fw-bold ms-1 float-end">${q.prelim_score} Pts</span></li>`;
+                                });
+                                qualifierHTML += `</ul>`;
+                            });
+                            qualifierHTML += `</div>`;
+                            
+                            msg = `You are about to launch the Final Round. This will permanently lock all preliminary scores.<br>${qualifierHTML}`;
+                            promptDeactivate({ preventDefault: () => {} }, formElement, msg);
+                        })
+                        .catch(err => {
+                            console.error("Leaderboard preview fetch error:", err);
+                            promptDeactivate({ preventDefault: () => {} }, formElement, "Are you sure you want to activate the Final Round?");
+                        });
+                    return; // Halt execution while fetching
+                }
+
+                // STANDARD WARNING PROMPTS
                 if (action === 'deactivate') {
                     if (prog && prog.total > 0 && prog.submitted < prog.total) {
                         msg = `WARNING: Only ${prog.submitted} out of ${prog.total} assigned judges have locked their scores. Deactivating will prevent them from finishing.`;
@@ -203,21 +275,16 @@
                     }
                 }
                 
-                // Pass to the global modal logic with a dummy event object
                 promptDeactivate({ preventDefault: () => {} }, formElement, msg);
             })
             .catch(err => {
                 console.error(err);
-                // Fallback if API fails
                 promptDeactivate({ preventDefault: () => {} }, formElement, "Are you sure you want to change this segment's status?");
             });
     };
 
     document.addEventListener('DOMContentLoaded', function() {
-        
-        // --- REAL-TIME ADMIN POLLING (Updates the background Badges) ---
         setInterval(() => {
-            // Append a timestamp parameter to prevent aggressive browser caching
             fetch(`{{ url_for('events.api_event_status', event_id=event.id) }}?_=` + new Date().getTime())
             .then(res => res.json())
             .then(data => {
@@ -239,7 +306,6 @@
             .catch(err => console.error("Polling error:", err));
         }, 3000); 
 
-        // (Keep the existing Add/Edit Segment Javascript validations below this)
         {% set ns_js = namespace(total=0) %}
         {% for seg in event.segments if not seg.is_final %}
             {% set w = seg.percentage_weight|float %}
@@ -277,8 +343,6 @@
                 if(typeof showToast === 'function') showToast('error', `Submission blocked! Total criteria weight cannot exceed 100%.`);
             }
         }
-        
-        // FIXED: The missing parenthesis was specifically right here!
         document.querySelectorAll('.add-criteria-form').forEach(f => f.addEventListener('submit', function(e) { validateCriteriaWeight(e, this, false); }));
         document.querySelectorAll('.edit-criteria-form').forEach(f => f.addEventListener('submit', function(e) { validateCriteriaWeight(e, this, true); }));
     });

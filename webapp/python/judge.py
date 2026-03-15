@@ -31,14 +31,11 @@ def api_status():
         
         status_data = {}
         for event in events:
-            # Find the currently active segment (if any)
             active_segment = next((s for s in event.segments if s.is_active), None)
-            
             status_data[event.id] = {
                 'status': event.status,
                 'active_segment_id': active_segment.id if active_segment else None,
                 'active_segment_name': active_segment.name if active_segment else None,
-                # NEW: Send total questions to the frontend so it knows when +1 Q is added!
                 'total_questions': active_segment.total_questions if active_segment else 0
             }
             
@@ -64,7 +61,6 @@ def pb_scoring(event_id, segment_id):
             flash(f'The {segment.name} round is currently closed.', 'error')
             return redirect(url_for('index'))
 
-        # Fetch the specifically assigned contestant/team for this tabulator
         contestant = db.query(Contestant).filter(
             Contestant.event_id == event_id, 
             Contestant.assigned_judge_id == user['id']
@@ -74,13 +70,11 @@ def pb_scoring(event_id, segment_id):
             flash("You are not assigned to any team for this event.", 'error')
             return redirect(url_for('index'))
 
-        # Enforce Tie-Breaker Rules
         if not segment.is_contestant_allowed(contestant.id):
             flash("Your team is not participating in this specific round (Did not qualify).", 'warning')
             return redirect(url_for('index'))
 
         if request.method == 'POST':
-            # Save toggle inputs
             for q_num in range(1, segment.total_questions + 1):
                 answer_status = request.form.get(f'question_{q_num}')
                 if answer_status:
@@ -101,7 +95,6 @@ def pb_scoring(event_id, segment_id):
                         )
                         db.add(new_score)
             
-            # Using pure SQLAlchemy session commit
             db.commit()
             flash('Scores saved successfully!', 'success')
             return redirect(url_for('judge.pb_scoring', event_id=event_id, segment_id=segment_id))
@@ -131,10 +124,13 @@ def scoring(event_id, segment_id):
             flash("This segment is not currently active.", "warning")
             return redirect(url_for('index'))
             
-        contestants = event.contestants
+        # --- THE FIX: STRICT BACKEND ELIMINATION ---
+        # Instead of sending all contestants and hiding them with HTML, 
+        # we completely omit eliminated contestants from the memory payload!
+        allowed_contestants = [c for c in event.contestants if segment.is_contestant_allowed(c.id)]
+        
         criteria_list = segment.criteria
         
-        # Fetch existing scores for this judge
         existing_scores = db.query(Score).filter(
             Score.segment_id == segment_id,
             Score.judge_id == user['id']
@@ -146,7 +142,6 @@ def scoring(event_id, segment_id):
                 score_map[s.contestant_id] = {}
             score_map[s.contestant_id][s.criteria_id] = s.score_value
             
-        # Check if the judge has locked their scores
         progress = db.query(JudgeProgress).filter(
             JudgeProgress.segment_id == segment_id,
             JudgeProgress.judge_id == user['id']
@@ -156,7 +151,7 @@ def scoring(event_id, segment_id):
         return render_template('judge_scoring.html', 
                                event=event, 
                                segment=segment, 
-                               contestants=contestants, 
+                               contestants=allowed_contestants, # Injecting the filtered list!
                                criteria_list=criteria_list,
                                score_map=score_map,
                                is_locked=is_locked)
@@ -167,7 +162,6 @@ def scoring(event_id, segment_id):
 @judge_bp.route('/api_submit_score', methods=['POST'])
 @require_role(['judge'])
 def api_submit_score():
-    """Async route for auto-saving individual criteria scores."""
     data = request.get_json()
     segment_id = data.get('segment_id')
     contestant_id = data.get('contestant_id')
@@ -177,12 +171,10 @@ def api_submit_score():
     user_id = session.get('user')['id']
     db = SessionLocal()
     try:
-        # Prevent edits if scores are already locked
         progress = db.query(JudgeProgress).filter_by(segment_id=segment_id, judge_id=user_id).first()
         if progress and progress.is_submitted:
             return jsonify({"status": "error", "message": "Scores are already locked."})
             
-        # Process the score
         from webapp.python.services import submit_pageant_score
         success, msg = submit_pageant_score(db, user_id, contestant_id, criteria_id, float(score_value))
         
@@ -199,7 +191,6 @@ def api_submit_score():
 @judge_bp.route('/api_lock_segment', methods=['POST'])
 @require_role(['judge'])
 def api_lock_segment():
-    """Permanently locks a judge's scores for a segment."""
     data = request.get_json()
     segment_id = data.get('segment_id')
     user_id = session.get('user')['id']

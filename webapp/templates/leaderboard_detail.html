@@ -5,7 +5,6 @@
 {% block content %}
 <div class="dashboard-container fade-in-up">
     
-    <!-- Multi-Event Tab Switcher -->
     {% if all_active_events and all_active_events|length > 0 %}
     <div class="mb-4 d-flex flex-wrap align-items-center gap-2 p-3 glass-panel" style="border-radius: 12px; background: #ffffff; border: 1px solid rgba(0,0,0,0.05);">
         <span class="text-muted text-sm d-flex align-items-center me-2" style="font-weight: 600;"><i class="fa-solid fa-layer-group me-2"></i> Active Events:</span>
@@ -17,7 +16,6 @@
     </div>
     {% endif %}
 
-    <!-- Header Area -->
     <header class="d-flex justify-content-between align-items-end mb-4">
         <div>
             <h2 style="font-weight: 700; color: #1e293b; margin-bottom: 5px;">{{ event.name }} <span style="font-weight: 300; color: #64748b;">| Live Leaderboard</span></h2>
@@ -25,13 +23,11 @@
         </div>
     </header>
 
-    <!-- Global Connection Ribbon -->
     <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
         <span class="text-success" style="font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px;"><i class="fa-solid fa-satellite-dish fa-beat me-2"></i> REAL-TIME CONNECTION ACTIVE</span>
         <span class="text-muted" style="font-size: 0.8rem; font-family: monospace; font-weight: 600;" id="lastUpdated">Updating...</span>
     </div>
 
-    <!-- Live Tables Injector -->
     <div id="tablesContainer">
         <div class="text-center py-5">
             <i class="fa-solid fa-circle-notch fa-spin fa-2x text-primary mb-3"></i>
@@ -44,14 +40,13 @@
 <style>
     .table-hover-row:hover { background: rgba(59, 130, 246, 0.03) !important; }
     
-    /* Optimized Table Styling for Compact Width */
     .leaderboard-table th { 
         padding: 10px 6px; 
         color: #64748b; 
         font-weight: 700; 
-        font-size: 0.75rem; /* Reduced font size to fit more columns */
+        font-size: 0.75rem; 
         border-bottom: 2px solid rgba(0,0,0,0.05); 
-        white-space: normal; /* ALLOWS 2 LINES */
+        white-space: normal; 
         line-height: 1.2;
         vertical-align: bottom;
     }
@@ -60,7 +55,7 @@
         vertical-align: middle; 
         border-bottom: 1px solid rgba(0,0,0,0.03); 
         white-space: nowrap; 
-        font-size: 0.9rem; /* Reduced font size */
+        font-size: 0.9rem; 
     }
 </style>
 {% endblock %}
@@ -98,8 +93,6 @@
                     return;
                 }
 
-                // 1. Sort all segments strictly by their Order Index, and then by their creation ID.
-                // This guarantees that Tie Breakers and Clinchers immediately follow their parent round!
                 const sortedSegments = [...data.segments].sort((a, b) => {
                     if (a.order_index !== b.order_index) return a.order_index - b.order_index;
                     return a.id - b.id;
@@ -110,14 +103,14 @@
                 categories.forEach(category => {
                     const rows = data.leaderboard[category];
                     
-                    // --- SMART RANKING ENGINE (Overrides backend to prevent Tie-Breaker pollution) ---
                     rows.forEach(row => {
                         let prelimBase = 0;
                         let finalBase = 0;
                         sortedSegments.forEach(s => {
                             if (!s.is_clincher) {
-                                const val = row.segment_scores[s.id];
-                                if (val !== '-') {
+                                // THE FIX: Math engine uses Weighted scores
+                                const val = row.segment_weighted[s.id];
+                                if (val !== '-' && val !== undefined) {
                                     if (s.is_final) finalBase += parseFloat(val);
                                     else prelimBase += parseFloat(val);
                                 }
@@ -127,47 +120,38 @@
                         row.calculated_final_base = finalBase;
                     });
 
-                    // True Sorting (Base Score > Clinchers > Fallbacks)
                     rows.sort((a, b) => {
                         if (data.final_started) {
-                            // 1. Final Base Score
                             if (b.calculated_final_base !== a.calculated_final_base) return b.calculated_final_base - a.calculated_final_base;
-                            // 2. Final Clinchers (Tie Breakers)
                             const finalClinchers = sortedSegments.filter(s => s.is_final && s.is_clincher);
                             for (let s of finalClinchers) {
-                                let valA = a.segment_scores[s.id] === '-' ? -1 : parseFloat(a.segment_scores[s.id]);
-                                let valB = b.segment_scores[s.id] === '-' ? -1 : parseFloat(b.segment_scores[s.id]);
+                                let valA = a.segment_weighted[s.id] === '-' ? -1 : parseFloat(a.segment_weighted[s.id]);
+                                let valB = b.segment_weighted[s.id] === '-' ? -1 : parseFloat(b.segment_weighted[s.id]);
                                 if (valB !== valA) return valB - valA;
                             }
-                            // 3. Fallback to Prelim
                             if (b.calculated_prelim_base !== a.calculated_prelim_base) return b.calculated_prelim_base - a.calculated_prelim_base;
                         } else {
-                            // 1. Prelim Base Score
                             if (b.calculated_prelim_base !== a.calculated_prelim_base) return b.calculated_prelim_base - a.calculated_prelim_base;
-                            // 2. Prelim Clinchers (Tie Breakers)
                             const prelimClinchers = sortedSegments.filter(s => !s.is_final && s.is_clincher);
                             for (let s of prelimClinchers) {
-                                let valA = a.segment_scores[s.id] === '-' ? -1 : parseFloat(a.segment_scores[s.id]);
-                                let valB = b.segment_scores[s.id] === '-' ? -1 : parseFloat(b.segment_scores[s.id]);
+                                let valA = a.segment_weighted[s.id] === '-' ? -1 : parseFloat(a.segment_weighted[s.id]);
+                                let valB = b.segment_weighted[s.id] === '-' ? -1 : parseFloat(b.segment_weighted[s.id]);
                                 if (valB !== valA) return valB - valA;
                             }
                         }
-                        return 0; // Absolute tie
+                        return 0; 
                     });
 
-                    // Re-assign ranks based on True Sorting
                     rows.forEach((row, index) => {
                         row.rank = index + 1;
                         row.display_prelim = Number.isInteger(row.calculated_prelim_base) ? row.calculated_prelim_base.toString() : row.calculated_prelim_base.toFixed(2);
                         row.display_final = Number.isInteger(row.calculated_final_base) ? row.calculated_final_base.toString() : row.calculated_final_base.toFixed(2);
                     });
 
-                    // --- HTML RENDER ENGINE ---
                     if (categories.length > 1 || category !== "Overall") {
                         html += `<h4 class="mt-4 mb-3" style="color: #334155; font-weight: 700; display: flex; align-items: center; font-size: 1.1rem;"><i class="fa-solid fa-users me-2 text-primary"></i> ${category} Category</h4>`;
                     }
                     
-                    // Build Chronological Header
                     let headerHtml = `
                         <th style="width: 45px; text-align: center;">Rank</th>
                         <th style="width: 40px; text-align: center;">No.</th>
@@ -177,15 +161,12 @@
                     let totalPrelimInserted = false;
 
                     sortedSegments.forEach(s => {
-                        // Insert Total Prelim right before the first Final segment
                         if (s.is_final && !totalPrelimInserted) {
                             headerHtml += `<th style="text-align: center; background: rgba(59, 130, 246, 0.05); color: #2563eb; width: 60px; line-height: 1.1;">Total<br>Prelim</th>`;
                             totalPrelimInserted = true;
                         }
 
                         let bg = s.is_clincher ? 'background: rgba(245, 158, 11, 0.05); color: #d97706;' : (s.is_final ? 'background: rgba(239, 68, 68, 0.05); color: #dc2626;' : '');
-                        
-                        // Force formatting to save massive width on sudden death rounds
                         let displayName = s.name;
                         if (s.is_clincher) {
                             displayName = displayName.replace('Tie Breaker', 'TB').replace(' (', '<br>(').replace('Clincher', 'Clinch<br>');
@@ -194,12 +175,10 @@
                         headerHtml += `<th style="text-align: center; width: 60px; line-height: 1.1; ${bg}">${displayName}</th>`;
                     });
 
-                    // If no final segments exist, append Total Prelim at the end
                     if (!totalPrelimInserted) {
                         headerHtml += `<th style="text-align: center; background: rgba(59, 130, 246, 0.05); color: #2563eb; width: 60px; line-height: 1.1;">Total<br>Prelim</th>`;
                     }
 
-                    // Append Base Final at the absolute end if applicable
                     if (data.final_started) {
                         headerHtml += `<th style="text-align: center; background: rgba(239, 68, 68, 0.08); color: #b91c1c; width: 60px; line-height: 1.1;">Base<br>Final</th>`;
                     }
@@ -215,7 +194,7 @@
                     `;
                     
                     if (rows.length === 0) {
-                        const totalCols = 3 + sortedSegments.length + 2; // Approximate width
+                        const totalCols = 3 + sortedSegments.length + 2; 
                         html += `<tr><td colspan="${totalCols}" class="text-center py-4 text-muted">No scores logged yet.</td></tr>`;
                     } else {
                         rows.forEach(row => {
@@ -234,7 +213,6 @@
                                 <td style="color: #64748b; font-family: monospace; font-size: 0.95rem; text-align: center;">#${row.candidate_number}</td>
                                 <td><strong style="color: #0f172a; font-size: 0.95rem;">${row.name}</strong></td>`;
                             
-                            // Iterate rows chronologically
                             let totalPrelimRendered = false;
 
                             sortedSegments.forEach(s => {
@@ -243,6 +221,7 @@
                                     totalPrelimRendered = true;
                                 }
 
+                                // THE FIX: Table Display uses Unweighted 100% scores
                                 const score = row.segment_scores[s.id];
                                 let bg = s.is_clincher ? 'background: rgba(245, 158, 11, 0.02);' : (s.is_final ? 'background: rgba(239, 68, 68, 0.02);' : '');
                                 let color = s.is_clincher ? (score === '-' ? '#fcd34d' : '#b45309') : (s.is_final ? (score === '-' ? '#fca5a5' : '#b91c1c') : (score === '-' ? '#cbd5e1' : '#475569'));

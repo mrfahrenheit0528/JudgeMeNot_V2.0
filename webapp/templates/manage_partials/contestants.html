@@ -10,7 +10,8 @@
         <!-- Row 1: Number, Name, Add -->
         <div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 10px; width: 100%;">
             <input type="number" name="number" id="candidateNumberInput" class="form-control form-control-sm text-center" placeholder="#" style="width: 60px; flex-shrink: 0;" required>
-            <input type="text" name="name" class="form-control form-control-sm" placeholder="Contestant Name" style="flex: 1; min-width: 0;" required>
+            <!-- THE FIX: Added id="contestantNameInput" for the javascript to target -->
+            <input type="text" name="name" id="contestantNameInput" class="form-control form-control-sm" placeholder="Contestant Name" style="flex: 1; min-width: 0;" required>
             <button type="submit" class="btn btn-primary btn-sm glass-effect" style="flex: 0 0 auto;"><i class="fa-solid fa-plus me-1"></i> Add</button>
         </div>
 
@@ -131,14 +132,47 @@
         document.getElementById('addContestantForm')?.addEventListener('submit', function(e) { validateContestantNumber(e, this, null); });
         document.querySelectorAll('.edit-contestant-form').forEach(f => f.addEventListener('submit', function(e) { validateContestantNumber(e, this, parseInt(this.dataset.contestantId)); }));
 
-        // Drag & Drop logic
+        // Drag & Drop and Auto-Fill Name logic
         const area = document.getElementById('fileDropArea');
         const input = document.getElementById('contestantImage');
+        const nameInput = document.getElementById('contestantNameInput'); // Target the Name input
+        
+        function handleFileSelection(files) {
+            if (files.length) {
+                const fileName = files[0].name;
+                area.querySelector('.file-msg').textContent = fileName;
+                
+                // If Name input is completely empty, format the filename and auto-fill it!
+                if (nameInput && nameInput.value.trim() === '') {
+                    // 1. Remove the extension (.jpg, .png)
+                    let cleanName = fileName.replace(/\.[^/.]+$/, "");
+                    
+                    // 2. Replace hyphens and underscores with spaces
+                    cleanName = cleanName.replace(/[-_]/g, ' ');
+                    
+                    // 3. Capitalize the first letter of each word (Title Case)
+                    cleanName = cleanName.replace(/\b\w/g, char => char.toUpperCase());
+                    
+                    // 4. Inject it!
+                    nameInput.value = cleanName;
+                }
+            }
+        }
+
         if (area) {
             ['dragenter', 'dragover'].forEach(name => area.addEventListener(name, (e) => { e.preventDefault(); area.classList.add('is-active'); }));
             ['dragleave', 'drop'].forEach(name => area.addEventListener(name, (e) => { e.preventDefault(); area.classList.remove('is-active'); }));
-            area.addEventListener('drop', (e) => { e.preventDefault(); area.classList.remove('is-active'); input.files = e.dataTransfer.files; if(input.files.length) area.querySelector('.file-msg').textContent = input.files[0].name; });
-            input.addEventListener('change', () => { if(input.files.length) area.querySelector('.file-msg').textContent = input.files[0].name; });
+            
+            area.addEventListener('drop', (e) => { 
+                e.preventDefault(); 
+                area.classList.remove('is-active'); 
+                input.files = e.dataTransfer.files; 
+                handleFileSelection(input.files); 
+            });
+            
+            input.addEventListener('change', () => { 
+                handleFileSelection(input.files); 
+            });
         }
         
         // Auto-increment number logic

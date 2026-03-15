@@ -4,102 +4,670 @@
 
 {% block content %}
 <div class="dashboard-container fade-in-up">
-    <header class="page-header mb-4">
+    <!-- Added mb-5 and pb-3 for significantly more breathing room -->
+    <header class="page-header mb-5 pb-3" style="border-bottom: 1px solid rgba(0,0,0,0.05);">
         <div>
             <h2>{{ event.name }} <span class="text-muted" style="font-weight: 400; font-size: 1.4rem;">| Comprehensive Scores</span></h2>
             <p class="text-muted m-0">Detailed breakdown of scores per segment and judge.</p>
         </div>
         <div class="header-actions">
             <a href="{{ url_for('scores.index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
-            <a href="{{ url_for('scores.export', event_id=event.id, target='overall') }}" class="btn btn-success glass-effect"><i class="fa-solid fa-file-csv me-1"></i> Export Overall to CSV</a>
+            <a href="{{ url_for('scores.export', event_id=event.id, target='overall') }}" class="btn btn-success glass-effect"><i class="fa-solid fa-file-pdf me-1"></i> Export Overall to PDF</a>
         </div>
     </header>
 
-    <!-- OVERALL EVENT RESULTS -->
-    <div class="glass-panel mb-5">
-        <h4 class="mb-3"><i class="fa-solid fa-trophy text-warning me-2"></i> Overall Tabulation</h4>
-        <div class="table-responsive">
-            <table class="table mb-0" style="width: 100%; border-collapse: collapse;">
-                <thead style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.06);">
-                    <tr>
-                        <th style="padding: 12px 15px; text-align: left; width: 60px;">Rank</th>
-                        <th style="padding: 12px 15px; text-align: left; width: 60px;">No.</th>
-                        <th style="padding: 12px 15px; text-align: left;">Candidate Name</th>
-                        <th style="padding: 12px 15px; text-align: right; color: var(--primary); font-weight: 700;">Final Score</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in overall_leaderboard %}
-                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.03);">
-                        <td style="padding: 12px 15px; font-weight: bold;">{{ row.rank }}</td>
-                        <td style="padding: 12px 15px; font-family: monospace;">#{{ row.contestant.candidate_number }}</td>
-                        <td style="padding: 12px 15px;">{{ row.contestant.name }}</td>
-                        <td style="padding: 12px 15px; text-align: right; font-weight: bold;">
-                            {% if event.event_type == 'Score-Based' %}{{ "%.2f"|format(row.score) }}{% else %}{{ row.score }}{% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- INDIVIDUAL SEGMENT MATRICES -->
-    <h3 class="mb-3 text-muted" style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">Segment Breakdowns</h3>
-    
-    {% for seg in event.segments|sort(attribute='order_index') %}
-    <div class="glass-panel mb-4" style="border-left: 4px solid var(--accent);">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="m-0">{{ seg.order_index }}. {{ seg.name }} 
-                {% if seg.percentage_weight %}<span class="text-muted text-sm fw-normal">({{ (seg.percentage_weight * 100)|int }}% Weight)</span>{% endif %}
-            </h4>
-            <a href="{{ url_for('scores.export', event_id=event.id, target='segment_' ~ seg.id) }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-file-excel me-1 text-success"></i> Download Matrix</a>
-        </div>
+    {% if event.event_type == 'Point-Based' %}
+        <!-- ======================================================== -->
+        <!-- POINT-BASED (QUIZ BEE) COMPREHENSIVE VIEW                -->
+        <!-- ======================================================== -->
+        <h3 class="mb-3 text-muted" style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">Comprehensive Scoreboard</h3>
         
-        <div class="table-responsive">
-            <table class="table mb-0" style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-                <thead style="background: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(0,0,0,0.05);">
-                    <tr>
-                        <th style="padding: 10px 15px; text-align: left;">Contestant</th>
-                        {% for judge in event.assigned_judges %}
-                        <th style="padding: 10px 15px; text-align: center;">
-                            {{ judge.judge.name or judge.judge.username }}
-                            {% if judge.is_chairman %}<i class="fa-solid fa-star text-warning" title="Chairman"></i>{% endif %}
-                        </th>
-                        {% endfor %}
-                        <th style="padding: 10px 15px; text-align: center; font-weight: 700;">Raw Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in event.contestants|sort(attribute='candidate_number') %}
-                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.02);">
-                        <td style="padding: 10px 15px; border-right: 1px solid rgba(0,0,0,0.05);">
-                            <span class="text-muted font-monospace me-1">#{{ c.candidate_number }}</span> {{ c.name }}
-                        </td>
-                        
-                        {% set ns = namespace(row_total=0, has_scores=false) %}
-                        {% for judge in event.assigned_judges %}
-                            {% set j_score = matrix[seg.id][c.id][judge.judge_id] %}
-                            <td style="padding: 10px 15px; text-align: center;">
-                                {% if j_score != '-' %}
-                                    {{ j_score }}
-                                    {% set ns.row_total = ns.row_total + j_score %}
-                                    {% set ns.has_scores = true %}
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                        {% endfor %}
-                        
-                        <td style="padding: 10px 15px; text-align: center; font-weight: bold; background: rgba(59, 130, 246, 0.03);">
-                            {% if ns.has_scores %}{{ ns.row_total }}{% else %}-{% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div id="tablesContainer">
+            <div class="text-center py-5 glass-panel" style="border-radius: 12px;">
+                <i class="fa-solid fa-circle-notch fa-spin fa-2x text-primary mb-3"></i>
+                <p class="text-muted">Loading comprehensive scores...</p>
+            </div>
         </div>
-    </div>
-    {% endfor %}
+
+    {% else %}
+        <!-- ======================================================== -->
+        <!-- SCORE-BASED (PAGEANT) MATRICES & STATS ENGINE            -->
+        <!-- ======================================================== -->
+        {% set categories = ['Male', 'Female'] if event.category_count == 2 else ['Overall'] %}
+
+        <!-- Tab Navigation Switcher (Added mt-2 for extra spacing from header) -->
+        <div class="glass-panel mb-4 mt-2 p-2 d-inline-flex align-items-center shadow-sm" style="border-radius: 12px; background: rgba(255,255,255,0.7); gap: 8px;">
+            {% for cat in categories %}
+                <button type="button" id="btn-tab-{{ cat|lower }}" class="btn {% if loop.first %}btn-primary{% else %}btn-outline-secondary{% endif %} fw-bold px-4" style="border-radius: 8px; {% if loop.first %}border: none; background: var(--primary); color: #fff;{% else %}border: none; background: transparent; color: #64748b;{% endif %}" onclick="switchScoresTab('{{ cat|lower }}')">
+                    <i class="fa-solid {% if cat == 'Male' %}fa-mars{% elif cat == 'Female' %}fa-venus{% else %}fa-users{% endif %} me-2"></i> {{ cat }} Category
+                </button>
+            {% endfor %}
+            <button type="button" id="btn-tab-stats" class="btn btn-outline-secondary fw-bold px-4" style="border-radius: 8px; border: none; background: transparent; color: #64748b;" onclick="switchScoresTab('stats')">
+                <i class="fa-solid fa-chart-pie me-2"></i> Insights & Stats
+            </button>
+        </div>
+
+        <!-- Generate Tab Content for Each Category -->
+        {% for cat in categories %}
+        <div id="tab-content-{{ cat|lower }}" class="scores-tab-content" style="display: {% if loop.first %}block{% else %}none{% endif %};">
+            
+            <!-- Filter Leaderboard locally by Category -->
+            {% set cat_leaderboard = [] %}
+            {% for row in overall_leaderboard %}
+                {% if event.category_count == 1 or row.contestant.gender == cat %}
+                    {% set _ = cat_leaderboard.append(row) %}
+                {% endif %}
+            {% endfor %}
+
+            <!-- OVERALL EVENT RESULTS FOR THIS CATEGORY -->
+            <div class="glass-panel mb-5">
+                <h4 class="mb-3 d-flex align-items-center"><i class="fa-solid fa-trophy text-warning me-2"></i> Overall Tabulation <span class="badge bg-secondary ms-3" style="font-size: 0.8rem;">{{ cat }}</span></h4>
+                <div class="table-responsive">
+                    <table class="table mb-0" style="width: 100%; border-collapse: collapse;">
+                        <thead style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.06);">
+                            <tr>
+                                <th style="padding: 12px 15px; text-align: left; width: 60px;">Rank</th>
+                                <th style="padding: 12px 15px; text-align: left; width: 60px;">No.</th>
+                                <th style="padding: 12px 15px; text-align: left;">Candidate Name</th>
+                                <th style="padding: 12px 15px; text-align: right; color: var(--primary); font-weight: 700;">Final Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in cat_leaderboard %}
+                            <tr style="border-bottom: 1px solid rgba(0,0,0,0.03);">
+                                <td style="padding: 12px 15px; font-weight: bold;">{{ loop.index }}</td>
+                                <td style="padding: 12px 15px; font-family: monospace;">#{{ row.contestant.candidate_number }}</td>
+                                <td style="padding: 12px 15px;">{{ row.contestant.name }}</td>
+                                <td style="padding: 12px 15px; text-align: right; font-weight: bold; color: var(--primary);">
+                                    {{ "%.2f"|format(row.score) }}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No scores calculated for {{ cat|lower }}s yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- INDIVIDUAL SEGMENT MATRICES FOR THIS CATEGORY -->
+            <h3 class="mb-3 text-muted" style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">Judge Segment Breakdowns</h3>
+            
+            {% for seg in event.segments|sort(attribute='order_index') %}
+            <div class="glass-panel mb-4" style="border-left: 4px solid var(--accent);">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="m-0">{{ seg.order_index }}. {{ seg.name }} 
+                        {% if seg.percentage_weight %}<span class="text-muted text-sm fw-normal">({{ (seg.percentage_weight * 100)|int }}% Weight)</span>{% endif %}
+                    </h4>
+                    <a href="{{ url_for('scores.export', event_id=event.id, target='segment_' ~ seg.id) }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-file-excel me-1 text-success"></i> Download Matrix</a>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table mb-0" style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                        <thead style="background: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(0,0,0,0.05);">
+                            <tr>
+                                <th style="padding: 10px 15px; text-align: left;">Contestant</th>
+                                {% for judge in event.assigned_judges %}
+                                <th style="padding: 10px 15px; text-align: center;">
+                                    {{ judge.judge.name or judge.judge.username }}
+                                    {% if judge.is_chairman %}<i class="fa-solid fa-star text-warning" title="Chairman"></i>{% endif %}
+                                </th>
+                                {% endfor %}
+                                <!-- THE FIX: Matrix displays unweighted Average out of 100 -->
+                                <th style="padding: 10px 15px; text-align: center; font-weight: 700;">Average</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set cat_contestants = event.contestants | selectattr('gender', 'equalto', cat) | list if event.category_count == 2 else event.contestants %}
+                            
+                            {% for c in cat_contestants|sort(attribute='candidate_number') %}
+                            <tr style="border-bottom: 1px solid rgba(0,0,0,0.02);">
+                                <td style="padding: 10px 15px; border-right: 1px solid rgba(0,0,0,0.05);">
+                                    <span class="text-muted font-monospace me-1">#{{ c.candidate_number }}</span> {{ c.name }}
+                                </td>
+                                
+                                {% set ns = namespace(row_total=0, count=0, has_scores=false) %}
+                                {% for judge in event.assigned_judges %}
+                                    {% set j_score = matrix[seg.id][c.id][judge.judge_id] %}
+                                    <td style="padding: 10px 15px; text-align: center;">
+                                        {% if j_score != '-' %}
+                                            {{ "%.2f"|format(j_score) }}
+                                            {% set ns.row_total = ns.row_total + j_score %}
+                                            {% set ns.count = ns.count + 1 %}
+                                            {% set ns.has_scores = true %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                                
+                                <!-- THE FIX: Matrix Display Math updated to true average calculation -->
+                                <td style="padding: 10px 15px; text-align: center; font-weight: bold; background: rgba(59, 130, 246, 0.03);">
+                                    {% if ns.has_scores and ns.count > 0 %}{{ "%.2f"|format(ns.row_total / ns.count) }}{% else %}-{% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="{{ 2 + event.assigned_judges|length }}" class="text-center py-4 text-muted">No {{ cat|lower }} contestants found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+        {% endfor %}
+
+        <!-- ======================================================== -->
+        <!-- NEW BENTO-STYLE INSIGHTS & STATS TAB                     -->
+        <!-- ======================================================== -->
+        <div id="tab-content-stats" class="scores-tab-content" style="display: none;">
+            
+            <div class="bento-grid">
+                
+                <!-- BENTO BOX 1: Top Scorer -->
+                <div class="bento-box bento-highlight-success">
+                    <div class="bento-header">
+                        <div class="bento-icon bg-success-light"><i class="fa-solid fa-trophy text-success"></i></div>
+                        <span class="bento-title">Top Scorer Overall</span>
+                    </div>
+                    <div class="bento-body">
+                        {% if stats.top_scorer %}
+                            <h3 class="bento-main-val text-success">{{ stats.top_scorer.contestant.name }}</h3>
+                            <div class="bento-meta">
+                                <span class="bento-badge bg-success-solid">{{ "%.2f"|format(stats.top_scorer.score) }} Pts</span>
+                                <span class="bento-subtext">#{{ stats.top_scorer.contestant.candidate_number }} • {{ stats.top_scorer.contestant.gender or 'Overall' }}</span>
+                            </div>
+                        {% else %}
+                            <p class="bento-empty">No scores calculated yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- BENTO BOX 2: Lowest Scorer -->
+                <div class="bento-box bento-highlight-danger">
+                    <div class="bento-header">
+                        <div class="bento-icon bg-danger-light"><i class="fa-solid fa-arrow-trend-down text-danger"></i></div>
+                        <span class="bento-title">Lowest Scorer Overall</span>
+                    </div>
+                    <div class="bento-body">
+                        {% if stats.lowest_scorer %}
+                            <h3 class="bento-main-val text-danger">{{ stats.lowest_scorer.contestant.name }}</h3>
+                            <div class="bento-meta">
+                                <span class="bento-badge bg-danger-solid">{{ "%.2f"|format(stats.lowest_scorer.score) }} Pts</span>
+                                <span class="bento-subtext">#{{ stats.lowest_scorer.contestant.candidate_number }} • {{ stats.lowest_scorer.contestant.gender or 'Overall' }}</span>
+                            </div>
+                        {% else %}
+                            <p class="bento-empty">No scores calculated yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- BENTO BOX 3: Segment Extremes (Split Stack) -->
+                <div class="bento-stack">
+                    <div class="bento-box bento-small bento-border-danger">
+                        <div class="bento-header mb-1">
+                            <span class="bento-title text-danger"><i class="fa-solid fa-fire me-1"></i> Toughest Segment</span>
+                        </div>
+                        <div class="bento-body">
+                            {% if stats.toughest_segment %}
+                                <strong class="bento-sub-val">{{ stats.toughest_segment.name }}</strong>
+                                <span class="bento-subtext d-block">Avg: {{ "%.2f"|format(stats.toughest_segment.avg) }}</span>
+                            {% else %}
+                                <span class="bento-empty">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="bento-box bento-small bento-border-success">
+                        <div class="bento-header mb-1">
+                            <span class="bento-title text-success"><i class="fa-solid fa-leaf me-1"></i> Easiest Segment</span>
+                        </div>
+                        <div class="bento-body">
+                            {% if stats.easiest_segment %}
+                                <strong class="bento-sub-val">{{ stats.easiest_segment.name }}</strong>
+                                <span class="bento-subtext d-block">Avg: {{ "%.2f"|format(stats.easiest_segment.avg) }}</span>
+                            {% else %}
+                                <span class="bento-empty">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BENTO BOX 4: Segment Averages (Tall) -->
+                <div class="bento-box bento-tall">
+                    <div class="bento-header">
+                        <div class="bento-icon bg-primary-light"><i class="fa-solid fa-chart-column text-primary"></i></div>
+                        <span class="bento-title">Segment Averages</span>
+                    </div>
+                    <div class="bento-body" style="flex: 1; overflow-y: auto;">
+                        <table class="bento-table">
+                            <thead>
+                                <tr>
+                                    <th>Segment</th>
+                                    <th style="text-align: right;">Avg Score (100)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for seg in event.segments|sort(attribute='order_index') %}
+                                <tr>
+                                    <td>{{ seg.name }}</td>
+                                    <td class="bento-mono" style="text-align: right;">{{ "%.2f"|format(stats.segment_averages.get(seg.id, 0)) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- BENTO BOX 5: Judge Progress (Wide + Tall) -->
+                <div class="bento-box bento-tall bento-wide">
+                    <div class="bento-header">
+                        <div class="bento-icon bg-accent-light"><i class="fa-solid fa-list-check text-accent"></i></div>
+                        <div style="display: flex; flex-direction: column;">
+                            <span class="bento-title">Judge Scoring Progress</span>
+                            <span class="bento-subtext">Green checkmarks indicate permanently locked scores.</span>
+                        </div>
+                    </div>
+                    <div class="bento-body" style="flex: 1; overflow-x: auto;">
+                        <table class="bento-table bento-table-progress">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left;">Segment</th>
+                                    {% for judge in event.assigned_judges %}
+                                    <th style="text-align: center;">
+                                        <div title="{{ judge.judge.name or judge.judge.username }}" class="bento-truncate">
+                                            {{ judge.judge.username }}
+                                        </div>
+                                    </th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for seg in event.segments|sort(attribute='order_index') %}
+                                <tr>
+                                    <td><strong>{{ seg.name }}</strong></td>
+                                    {% for judge in event.assigned_judges %}
+                                        {% set is_submitted = stats.progress_map.get(seg.id, {}).get(judge.judge_id, False) %}
+                                        <td style="text-align: center;">
+                                            {% if is_submitted %}
+                                                <i class="fa-solid fa-circle-check text-success" title="Locked" style="font-size: 1.2rem;"></i>
+                                            {% else %}
+                                                <i class="fa-solid fa-clock text-warning" title="Pending" style="font-size: 1.1rem; opacity: 0.6;"></i>
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    {% endif %}
 </div>
+
+<!-- ========================================== -->
+<!-- BULLETPROOF BENTO BOX CSS & TABLE STYLES   -->
+<!-- ========================================== -->
+<style>
+    /* Old Matrix Table CSS */
+    .table-hover-row:hover { background: rgba(59, 130, 246, 0.03) !important; }
+    .leaderboard-table th { 
+        padding: 10px 6px; color: #64748b; font-weight: 700; font-size: 0.75rem; 
+        border-bottom: 2px solid rgba(0,0,0,0.05); white-space: normal; 
+        line-height: 1.2; vertical-align: bottom;
+    }
+    .leaderboard-table td { 
+        padding: 10px 6px; vertical-align: middle; 
+        border-bottom: 1px solid rgba(0,0,0,0.03); white-space: nowrap; font-size: 0.9rem; 
+    }
+
+    /* --- STRICT BENTO GRID CSS --- */
+    .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-auto-rows: minmax(140px, auto);
+        gap: 24px;
+        align-items: stretch;
+    }
+
+    .bento-box {
+        background: #ffffff;
+        border-radius: 24px; /* Apple-style rounded corners */
+        padding: 24px;
+        border: 1px solid rgba(0,0,0,0.04);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.02), 0 10px 30px rgba(0,0,0,0.03);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .bento-box:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.04), 0 15px 40px rgba(0,0,0,0.05);
+    }
+
+    /* Grid Spanning Rules */
+    .bento-tall { grid-row: span 2; }
+    .bento-wide { grid-column: span 2; }
+
+    /* The Split Stack Box */
+    .bento-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        grid-column: span 1;
+    }
+    .bento-small {
+        flex: 1;
+        padding: 18px 24px;
+        justify-content: center;
+    }
+
+    /* Highlight Accents */
+    .bento-highlight-success { border-left: 6px solid #10b981; }
+    .bento-highlight-danger { border-left: 6px solid #ef4444; }
+    .bento-border-success { border: 1px solid rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.02); }
+    .bento-border-danger { border: 1px solid rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.02); }
+
+    /* Box Internals */
+    .bento-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .bento-icon {
+        width: 40px; height: 40px;
+        border-radius: 12px;
+        display: flex; justify-content: center; align-items: center;
+        font-size: 1.1rem;
+    }
+    .bg-success-light { background: rgba(16, 185, 129, 0.15); }
+    .bg-danger-light { background: rgba(239, 68, 68, 0.15); }
+    .bg-primary-light { background: rgba(59, 130, 246, 0.15); }
+    .bg-accent-light { background: rgba(139, 92, 246, 0.15); }
+
+    .bento-title { font-weight: 700; color: #1e293b; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .bento-body { display: flex; flex-direction: column; }
+    
+    .bento-main-val { font-size: 1.8rem; font-weight: 800; margin: 0 0 10px 0; line-height: 1.2; }
+    .bento-sub-val { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    
+    .bento-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .bento-badge { padding: 4px 10px; border-radius: 8px; font-size: 0.95rem; font-weight: 700; color: white; }
+    .bg-success-solid { background: #10b981; }
+    .bg-danger-solid { background: #ef4444; }
+    
+    .bento-subtext { color: #64748b; font-size: 0.85rem; font-weight: 500; }
+    .bento-empty { color: #94a3b8; font-style: italic; font-size: 0.9rem; margin: 0; }
+
+    /* Bento Tables */
+    .bento-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .bento-table th { color: #64748b; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; padding: 12px 10px; border-bottom: 2px solid rgba(0,0,0,0.05); text-align: left; }
+    .bento-table td { padding: 14px 10px; color: #1e293b; font-size: 0.95rem; border-bottom: 1px solid rgba(0,0,0,0.03); }
+    .bento-table tr:last-child td { border-bottom: none; }
+    .bento-table-progress th, .bento-table-progress td { padding: 16px 12px; }
+    .bento-mono { font-family: monospace; font-weight: 600; color: #0f172a; }
+    .bento-truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; margin: 0 auto; }
+
+    /* Responsive Bento Overrides */
+    @media (max-width: 1100px) {
+        .bento-grid { grid-template-columns: repeat(2, 1fr); }
+        .bento-tall { grid-column: span 1; }
+        .bento-wide { grid-column: span 2; grid-row: auto; }
+    }
+    @media (max-width: 768px) {
+        .bento-grid { grid-template-columns: 1fr; }
+        .bento-tall, .bento-wide, .bento-stack { grid-column: span 1; }
+    }
+</style>
+
+<script>
+    // Tab Switching Engine
+    window.switchScoresTab = function(tabName) {
+        // Hide all contents
+        document.querySelectorAll('.scores-tab-content').forEach(el => el.style.display = 'none');
+        // Show target
+        const target = document.getElementById('tab-content-' + tabName);
+        if (target) target.style.display = 'block';
+
+        // Reset all buttons to Outline styles
+        document.querySelectorAll('[id^="btn-tab-"]').forEach(btn => {
+            btn.className = 'btn btn-outline-secondary fw-bold px-4';
+            btn.style.background = 'transparent';
+            btn.style.color = '#64748b';
+        });
+
+        // Highlight active button to Solid styles
+        const activeBtn = document.getElementById('btn-tab-' + tabName);
+        if (activeBtn) {
+            activeBtn.className = 'btn btn-primary fw-bold px-4';
+            activeBtn.style.background = 'var(--primary)';
+            activeBtn.style.color = '#fff';
+        }
+    };
+</script>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if event.event_type == 'Point-Based' %}
+<script>
+    // Point-Based Comprehensive Engine
+    document.addEventListener('DOMContentLoaded', function() {
+        function loadComprehensiveScores() {
+            fetch(`{{ url_for('leaderboard.api_detail', event_id=event.id) }}?_=` + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('tablesContainer');
+                const categories = Object.keys(data.leaderboard).sort();
+
+                if (categories.length === 0) {
+                    container.innerHTML = `
+                    <div class="glass-panel text-center py-5" style="border-radius: 12px;">
+                        <i class="fa-solid fa-ghost fa-3x mb-3 text-muted" style="opacity: 0.3;"></i>
+                        <h4 class="text-muted m-0">No Data Available</h4>
+                    </div>`;
+                    return;
+                }
+
+                const sortedSegments = [...data.segments].sort((a, b) => {
+                    if (a.order_index !== b.order_index) return a.order_index - b.order_index;
+                    return a.id - b.id;
+                });
+
+                let html = '';
+                
+                categories.forEach(category => {
+                    const rows = data.leaderboard[category];
+                    
+                    rows.forEach(row => {
+                        let prelimBase = 0;
+                        let finalBase = 0;
+                        sortedSegments.forEach(s => {
+                            if (!s.is_clincher) {
+                                // THE FIX: Calculations run exclusively on Weighted scores
+                                const val = row.segment_weighted[s.id];
+                                if (val !== '-' && val !== undefined) {
+                                    if (s.is_final) finalBase += parseFloat(val);
+                                    else prelimBase += parseFloat(val);
+                                }
+                            }
+                        });
+                        row.calculated_prelim_base = prelimBase;
+                        row.calculated_final_base = finalBase;
+                    });
+
+                    rows.sort((a, b) => {
+                        if (data.final_started) {
+                            if (b.calculated_final_base !== a.calculated_final_base) return b.calculated_final_base - a.calculated_final_base;
+                            const finalClinchers = sortedSegments.filter(s => s.is_final && s.is_clincher);
+                            for (let s of finalClinchers) {
+                                let valA = a.segment_weighted[s.id] === '-' ? -1 : parseFloat(a.segment_weighted[s.id]);
+                                let valB = b.segment_weighted[s.id] === '-' ? -1 : parseFloat(b.segment_weighted[s.id]);
+                                if (valB !== valA) return valB - valA;
+                            }
+                            if (b.calculated_prelim_base !== a.calculated_prelim_base) return b.calculated_prelim_base - a.calculated_prelim_base;
+                        } else {
+                            if (b.calculated_prelim_base !== a.calculated_prelim_base) return b.calculated_prelim_base - a.calculated_prelim_base;
+                            const prelimClinchers = sortedSegments.filter(s => !s.is_final && s.is_clincher);
+                            for (let s of prelimClinchers) {
+                                let valA = a.segment_weighted[s.id] === '-' ? -1 : parseFloat(a.segment_weighted[s.id]);
+                                let valB = b.segment_weighted[s.id] === '-' ? -1 : parseFloat(b.segment_weighted[s.id]);
+                                if (valB !== valA) return valB - valA;
+                            }
+                        }
+                        return 0;
+                    });
+
+                    rows.forEach((row, index) => {
+                        row.rank = index + 1;
+                        row.display_prelim = Number.isInteger(row.calculated_prelim_base) ? row.calculated_prelim_base.toString() : row.calculated_prelim_base.toFixed(2);
+                        row.display_final = Number.isInteger(row.calculated_final_base) ? row.calculated_final_base.toString() : row.calculated_final_base.toFixed(2);
+                    });
+
+                    if (categories.length > 1 || category !== "Overall") {
+                        html += `<h4 class="mt-4 mb-3" style="color: #334155; font-weight: 700; display: flex; align-items: center; font-size: 1.1rem;"><i class="fa-solid fa-users me-2 text-primary"></i> ${category} Category</h4>`;
+                    }
+                    
+                    let headerHtml = `
+                        <th style="width: 45px; text-align: center;">Rank</th>
+                        <th style="width: 40px; text-align: center;">No.</th>
+                        <th style="min-width: 130px; text-align: left;">Candidate Name</th>
+                    `;
+                    
+                    let totalPrelimInserted = false;
+
+                    sortedSegments.forEach(s => {
+                        if (s.is_final && !totalPrelimInserted) {
+                            headerHtml += `<th style="text-align: center; background: rgba(59, 130, 246, 0.05); color: #2563eb; width: 60px; line-height: 1.1;">Total<br>Prelim</th>`;
+                            totalPrelimInserted = true;
+                        }
+
+                        let bg = s.is_clincher ? 'background: rgba(245, 158, 11, 0.05); color: #d97706;' : (s.is_final ? 'background: rgba(239, 68, 68, 0.05); color: #dc2626;' : '');
+                        let displayName = s.name;
+                        if (s.is_clincher) {
+                            displayName = displayName.replace('Tie Breaker', 'TB').replace(' (', '<br>(').replace('Clincher', 'Clinch<br>');
+                        }
+                        headerHtml += `<th style="text-align: center; width: 60px; line-height: 1.1; ${bg}">${displayName}</th>`;
+                    });
+
+                    if (!totalPrelimInserted) {
+                        headerHtml += `<th style="text-align: center; background: rgba(59, 130, 246, 0.05); color: #2563eb; width: 60px; line-height: 1.1;">Total<br>Prelim</th>`;
+                    }
+
+                    if (data.final_started) {
+                        headerHtml += `<th style="text-align: center; background: rgba(239, 68, 68, 0.08); color: #b91c1c; width: 60px; line-height: 1.1;">Base<br>Final</th>`;
+                    }
+
+                    html += `
+                    <div class="glass-panel" style="padding: 0; overflow: hidden; border-radius: 12px; margin-bottom: 30px;">
+                        <div class="table-responsive" style="overflow-x: auto;">
+                            <table class="table mb-0 leaderboard-table" style="width: 100%; border-collapse: collapse;">
+                                <thead style="background: rgba(0,0,0,0.01);">
+                                    <tr>${headerHtml}</tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    if (rows.length === 0) {
+                        const totalCols = 3 + sortedSegments.length + 2; 
+                        html += `<tr><td colspan="${totalCols}" class="text-center py-4 text-muted">No scores logged yet.</td></tr>`;
+                    } else {
+                        rows.forEach(row => {
+                            let rankDisplay = `<span style="font-weight: 700; font-size: 1rem; color: #334155;">${row.rank}</span>`;
+                            let rowStyle = "";
+                            
+                            if (row.rank === 1) { 
+                                rankDisplay = '<i class="fa-solid fa-medal" style="color: #fbbf24;"></i> <span style="font-weight: 700; font-size: 1rem; color: #334155; margin-left: 3px;">1st</span>'; 
+                                rowStyle = "background: rgba(245, 158, 11, 0.04);";
+                            }
+                            else if (row.rank === 2) { rankDisplay = '<i class="fa-solid fa-medal" style="color: #94a3b8;"></i> <span style="font-weight: 700; font-size: 1rem; color: #334155; margin-left: 3px;">2nd</span>'; }
+                            else if (row.rank === 3) { rankDisplay = '<i class="fa-solid fa-medal" style="color: #cd7f32;"></i> <span style="font-weight: 700; font-size: 1rem; color: #334155; margin-left: 3px;">3rd</span>'; }
+
+                            html += `<tr class="table-hover-row transition-all" style="${rowStyle}">
+                                <td style="text-align: center;">${rankDisplay}</td>
+                                <td style="color: #64748b; font-family: monospace; font-size: 0.95rem; text-align: center;">#${row.candidate_number}</td>
+                                <td><strong style="color: #0f172a; font-size: 0.95rem;">${row.name}</strong></td>`;
+                            
+                            let totalPrelimRendered = false;
+
+                            sortedSegments.forEach(s => {
+                                if (s.is_final && !totalPrelimRendered) {
+                                    html += `<td style="text-align: center; font-weight: 700; background: rgba(59, 130, 246, 0.03); color: #1d4ed8; font-size: 0.9rem;">${row.display_prelim}</td>`;
+                                    totalPrelimRendered = true;
+                                }
+
+                                // THE FIX: Table Display uses Unweighted 100% scores
+                                const score = row.segment_scores[s.id];
+                                let bg = s.is_clincher ? 'background: rgba(245, 158, 11, 0.02);' : (s.is_final ? 'background: rgba(239, 68, 68, 0.02);' : '');
+                                let color = s.is_clincher ? (score === '-' ? '#fcd34d' : '#b45309') : (s.is_final ? (score === '-' ? '#fca5a5' : '#b91c1c') : (score === '-' ? '#cbd5e1' : '#475569'));
+
+                                html += `<td style="text-align: center; font-weight: 600; ${bg} color: ${color};">${score}</td>`;
+                            });
+
+                            if (!totalPrelimRendered) {
+                                html += `<td style="text-align: center; font-weight: 700; background: rgba(59, 130, 246, 0.03); color: #1d4ed8; font-size: 0.9rem;">${row.display_prelim}</td>`;
+                            }
+
+                            if (data.final_started) {
+                                html += `<td style="text-align: center; font-weight: 700; background: rgba(239, 68, 68, 0.05); color: #b91c1c; font-size: 0.9rem;">${row.display_final}</td>`;
+                            }
+
+                            html += `</tr>`;
+                        });
+                    }
+                    
+                    html += `</tbody></table></div></div>`;
+                });
+                
+                container.innerHTML = html;
+            })
+            .catch(err => console.error("Admin Scores Sync Error:", err));
+        }
+
+        loadComprehensiveScores();
+        setInterval(loadComprehensiveScores, 4000);
+    });
+</script>
+{% else %}
+<script>
+    // Seamless HTMX-Style Polling for Score-Based Matrices & Stats
+    document.addEventListener('DOMContentLoaded', function() {
+        function pollScoreBasedData() {
+            fetch(window.location.pathname + '?_=' + new Date().getTime(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.text())
+            .then(html => {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                
+                {% set cat_list = ['Male', 'Female'] if event.category_count == 2 else ['Overall'] %}
+                const tabs = {{ cat_list | tojson }}.map(c => c.toLowerCase());
+                tabs.push('stats');
+
+                tabs.forEach(tab => {
+                    const currentTab = document.getElementById('tab-content-' + tab);
+                    const newTab = doc.getElementById('tab-content-' + tab);
+                    if (currentTab && newTab) {
+                        currentTab.innerHTML = newTab.innerHTML;
+                    }
+                });
+            })
+            .catch(err => console.error("Admin Score-Based Sync Error:", err));
+        }
+
+        setInterval(pollScoreBasedData, 4000);
+    });
+</script>
+{% endif %}
 {% endblock %}

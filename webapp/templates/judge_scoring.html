@@ -131,7 +131,10 @@
                         <h4 class="category-title">{{ category }} Candidates</h4>
                         <div class="cards-wrapper">
                             {% for c in group %}
-                                {{ render_card(c, criteria_list, score_map, is_locked) }}
+                                <!-- THE FIX: Only render the card if they passed the cutoff! -->
+                                {% if segment.is_contestant_allowed(c.id) %}
+                                    {{ render_card(c, criteria_list, score_map, is_locked) }}
+                                {% endif %}
                             {% endfor %}
                         </div>
                     </div>
@@ -142,7 +145,10 @@
                         <h4 class="category-title">{% if grouped|length > 0 %}Uncategorized{% else %}All Candidates{% endif %}</h4>
                         <div class="cards-wrapper">
                             {% for c in unassigned %}
-                                {{ render_card(c, criteria_list, score_map, is_locked) }}
+                                <!-- THE FIX: Filter unassigned candidates as well -->
+                                {% if segment.is_contestant_allowed(c.id) %}
+                                    {{ render_card(c, criteria_list, score_map, is_locked) }}
+                                {% endif %}
                             {% endfor %}
                         </div>
                     </div>
@@ -172,8 +178,27 @@
     </div>
 </div>
 
+<!-- BEAUTIFIED BULLETPROOF ADMIN LOCK MODAL (NEWLY INJECTED) -->
+<div id="adminLockedModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index:9999; justify-content:center; align-items:center; padding: 20px;">
+    <div style="background: white; border-radius: 24px; max-width: 420px; width: 100%; padding: 40px 30px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transform-origin: center;">
+        <div style="width: 80px; height: 80px; background: rgba(239, 68, 68, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto; border: 4px solid rgba(239, 68, 68, 0.15);">
+            <i class="fa-solid fa-lock" style="font-size: 2.2rem; color: #ef4444;"></i>
+        </div>
+        <h3 style="margin: 0 0 10px 0; font-weight: 800; color: #0f172a; font-size: 1.6rem; letter-spacing: -0.5px;">Round Locked</h3>
+        <p style="margin: 0 0 30px 0; color: #64748b; font-size: 0.95rem; line-height: 1.5;">The administrator has paused or ended this round. Scoring is currently disabled to prevent unauthorized changes.</p>
+        <a href="{{ url_for('index') }}" style="display: block; width: 100%; background: #0f172a; color: white; text-decoration: none; padding: 14px 20px; border-radius: 12px; font-weight: 700; font-size: 1.05rem; transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            Return to Dashboard
+        </a>
+    </div>
+</div>
+
 <!-- Simplified & Strict CSS Layout -->
 <style>
+    @keyframes modalPop {
+        0% { opacity: 0; transform: scale(0.85); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+
     .dashboard-container {
         max-width: 1400px;
         margin: 0 auto;
@@ -457,43 +482,6 @@
 
 {% block extra_scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Look at the current URL to figure out if the judge is already scoring a segment
-        // Example: http://127.0.0.1:5000/judge/scoring/3/8
-        const currentPath = window.location.pathname;
-        let currentSegmentId = null;
-        
-        if (currentPath.includes('/judge/scoring/')) {
-            const pathParts = currentPath.split('/');
-            // Grab the last number from the URL, which is the segment ID (e.g., the '8')
-            currentSegmentId = parseInt(pathParts[pathParts.length - 1]); 
-        }
-
-        // Check for updates every 3 seconds
-        setInterval(function() {
-            fetch('/events/api/{{ event.id }}/status')
-                .then(response => response.json())
-                .then(data => {
-                    const activeSegmentId = data.active_segment_id;
-                    
-                    // CASE 1: Admin activated a segment, AND it's a completely new/different segment
-                    if (activeSegmentId !== null && activeSegmentId !== currentSegmentId) {
-                        // Send them to the correct scoring URL with both the Event ID and Segment ID
-                        window.location.href = `/judge/scoring/{{ event.id }}/${activeSegmentId}`;
-                    }
-                    
-                    // CASE 2: Admin paused/deactivated the segment, but the judge is still on the scoring page
-                    else if (activeSegmentId === null && currentSegmentId !== null) {
-                        // Reload the page so your backend securely kicks them back to the waiting room
-                        window.location.reload();
-                    }
-                    
-                    // CASE 3: activeSegmentId == currentSegmentId
-                    // Do absolutely nothing! Let them score in peace.
-                })
-                .catch(err => console.log("Polling for updates...", err));
-        }, 3000);
-    });
     function updatePairedInput(element, targetSelector) {
         const wrapper = element.closest('.score-wrapper');
         const target = wrapper.querySelector(targetSelector);
@@ -661,8 +649,6 @@
             closeImageModal();
         }
     });
-    
-    // -----------------------------
 
     document.querySelectorAll('.score-input').forEach(input => {
         input.addEventListener('keypress', function (e) {
@@ -670,6 +656,43 @@
                 this.blur(); 
             }
         });
+    });
+
+    // ===============================================
+    // LIVE POLLING ENGINE (NEWLY INJECTED FOR AUTO-REDIRECT)
+    // ===============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const currentSegmentId = {{ segment.id }};
+        const eventId = {{ event.id }};
+        
+        setInterval(() => {
+            fetch(`/judge/api/status?_=` + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                const eventStatus = data[eventId];
+                
+                // 1. Event paused or no segment active
+                if (!eventStatus || eventStatus.status !== 'Ongoing' || !eventStatus.active_segment_id) {
+                    document.getElementById('adminLockedModal').style.display = 'flex';
+                    document.querySelectorAll('.score-input, .score-slider, #lockScoresBtn').forEach(el => el.disabled = true);
+                    return;
+                }
+
+                // 2. NEW ROUND LAUNCHED! Instantly auto-redirect the judge!
+                if (eventStatus.active_segment_id !== currentSegmentId) {
+                    window.location.href = `/judge/scoring/${eventId}/${eventStatus.active_segment_id}`;
+                    return;
+                }
+
+                // 3. Current round active, ensure modal is hidden
+                document.getElementById('adminLockedModal').style.display = 'none';
+                
+                {% if not is_locked %}
+                document.querySelectorAll('.score-input, .score-slider, #lockScoresBtn').forEach(el => el.disabled = false);
+                {% endif %}
+            })
+            .catch(err => console.error("Sync Error:", err));
+        }, 2000); 
     });
 </script>
 {% endblock %}

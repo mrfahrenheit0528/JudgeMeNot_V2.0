@@ -1,128 +1,104 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from webapp.python.models import Event, Segment, Criteria, Contestant, Score, User
+from webapp.python.models import Event, Score, Contestant, Criteria
+
+def submit_pageant_score(db: Session, judge_id: int, contestant_id: int, criteria_id: int, score_value: float):
+    score = db.query(Score).filter_by(
+        judge_id=judge_id, contestant_id=contestant_id, criteria_id=criteria_id
+    ).first()
+    
+    crit = db.query(Criteria).filter_by(id=criteria_id).first()
+    if not crit:
+        return False, "Criteria not found"
+        
+    if score:
+        score.score_value = score_value
+    else:
+        score = Score(
+            contestant_id=contestant_id,
+            judge_id=judge_id,
+            criteria_id=criteria_id,
+            segment_id=crit.segment_id,
+            score_value=score_value
+        )
+        db.add(score)
+    db.commit()
+    return True, "Score saved"
+
 
 def get_live_leaderboard(db: Session, event_id: int):
     """
-    Returns a sorted list of contestants based on the event's scoring logic.
-    Supports Score-Based (weighted averages) and Point-Based (points accumulation).
+    Universal fallback generator used by PDF Exporters and basic tables.
+    Returns a unified leaderboard accurately calculating weights.
     """
     event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        return []
-        
-    contestants = db.query(Contestant).filter(Contestant.event_id == event_id).all()
+    all_scores = db.query(Score).join(Contestant).filter(Contestant.event_id == event_id).all()
+    
     results = []
+    final_started = False
+    final_seg = next((s for s in event.segments if s.is_final), None)
+    
+    if final_seg:
+        if final_seg.is_active or any(s.segment_id == final_seg.id and s.score_value is not None for s in all_scores):
+            final_started = True
 
-    # UPDATED DB LOGIC CHECK
-    if event.event_type == "Score-Based":
-        for contestant in contestants:
-            total_weighted_score = 0
-            segments = db.query(Segment).filter(Segment.event_id == event_id, Segment.is_revealed == True).all()
-            
-            for segment in segments:
-                criteria_list = db.query(Criteria).filter(Criteria.segment_id == segment.id).all()
-                segment_score = 0
-                
-                for crit in criteria_list:
-                    avg_score = db.query(func.avg(Score.score_value)).filter(
-                        Score.contestant_id == contestant.id,
-                        Score.criteria_id == crit.id
-                    ).scalar() or 0
-                    
-                    segment_score += (avg_score * crit.weight)
-                    
-                total_weighted_score += (segment_score * segment.percentage_weight)
-                
-            results.append({
-                "contestant": contestant,
-                "score": round(total_weighted_score, 2)
-            })
-            
-    # UPDATED DB LOGIC CHECK
-    elif event.event_type == "Point-Based":
-        all_scores = db.query(Score).join(Contestant).filter(Contestant.event_id == event_id).all()
+    for contestant in event.contestants:
+        prelim_score = 0.0
+        final_score = 0.0
         
-        # Check if final round exists and has started/finished
-        final_segments = [s for s in event.segments if s.is_final]
-        final_started = any(s.is_active for s in final_segments) or any(sc.segment_id in [s.id for s in final_segments] for sc in all_scores)
-        
-        for contestant in contestants:
-            prelim_score = 0
-            final_score = 0
-            
-            for segment in event.segments:
-                points_for_segment = len([s for s in all_scores if s.contestant_id == contestant.id and s.segment_id == segment.id and s.is_correct])
-                pts = points_for_segment * segment.points_per_question
+        for segment in event.segments:
+            if not segment.is_contestant_allowed(contestant.id):
+                continue
                 
-                if segment.is_final:
+            if event.event_type == 'Point-Based':
+                pts = sum([segment.points_per_question for s in all_scores if s.contestant_id == contestant.id and s.segment_id == segment.id and s.is_correct])
+                if segment.is_final or 'Clincher' in segment.name or 'Tie Breaker' in segment.name:
+                    final_score += pts
+                else:
+                    prelim_score += pts
+            else:
+                # THE FIX: Applying Criteria Weights properly in the Fallback engine
+                crit_weights = {crit.id: (crit.weight / 100.0 if crit.weight > 1.0 else crit.weight) for crit in segment.criteria}
+                
+                seg_scores_arr = []
+                for j in event.assigned_judges:
+                    j_score = 0.0
+                    has_scores = False
+                    for s in all_scores:
+                        if s.contestant_id == contestant.id and s.segment_id == segment.id and s.judge_id == j.judge_id and s.score_value is not None:
+                            cw = crit_weights.get(s.criteria_id, 1.0)
+                            j_score += s.score_value * cw
+                            has_scores = True
+                            
+                    if has_scores:
+                        seg_scores_arr.append(j_score)
+                        
+                avg_seg = sum(seg_scores_arr) / len(seg_scores_arr) if seg_scores_arr else 0.0
+                
+                w_seg = segment.percentage_weight or 0.0
+                if w_seg > 1.0: w_seg = w_seg / 100.0
+                
+                pts = avg_seg * w_seg if w_seg > 0 else avg_seg
+                
+                if segment.is_final or 'Clincher' in segment.name or 'Tie Breaker' in segment.name:
                     final_score += pts
                 else:
                     prelim_score += pts
                     
-            if event.scoring_type == "cumulative":
-                total_points = prelim_score + final_score
-            else:
-                total_points = final_score if final_started else prelim_score
-                
-            results.append({
-                "contestant": contestant,
-                "score": total_points
-            })
+        # Add contestant calculation to payload
+        results.append({
+            "contestant": contestant,
+            "score": final_score if final_started else prelim_score,
+            "prelim_score": prelim_score,
+            "final_score": final_score
+        })
 
-    results.sort(key=lambda x: x["score"], reverse=True)
+    # Descending standard sort
+    results.sort(key=lambda x: x["final_score"] if final_started else x["prelim_score"], reverse=True)
     
+    # Define simple rank
     rank = 1
     for r in results:
         r["rank"] = rank
         rank += 1
         
     return results
-
-def submit_quizbee_score(db: Session, tabulator_id: int, contestant_id: int, segment_id: int, question_number: int, is_correct: bool):
-    existing_score = db.query(Score).filter(
-        Score.contestant_id == contestant_id,
-        Score.segment_id == segment_id,
-        Score.question_number == question_number
-    ).first()
-    
-    if existing_score:
-        existing_score.is_correct = is_correct
-        existing_score.judge_id = tabulator_id
-    else:
-        new_score = Score(
-            contestant_id=contestant_id,
-            judge_id=tabulator_id,
-            segment_id=segment_id,
-            question_number=question_number,
-            is_correct=is_correct
-        )
-        db.add(new_score)
-        
-    db.commit()
-
-def submit_pageant_score(db: Session, judge_id: int, contestant_id: int, criteria_id: int, score_value: float):
-    criteria = db.query(Criteria).filter(Criteria.id == criteria_id).first()
-    if not criteria:
-        return False, "Criteria not found"
-        
-    existing_score = db.query(Score).filter(
-        Score.contestant_id == contestant_id,
-        Score.judge_id == judge_id,
-        Score.criteria_id == criteria_id
-    ).first()
-    
-    if existing_score:
-        existing_score.score_value = score_value
-    else:
-        new_score = Score(
-            contestant_id=contestant_id,
-            judge_id=judge_id,
-            segment_id=criteria.segment_id,
-            criteria_id=criteria_id,
-            score_value=score_value
-        )
-        db.add(new_score)
-        
-    db.commit()
-    return True, "Success"
