@@ -11,7 +11,7 @@
         </div>
         <div class="header-actions">
             <a href="{{ url_for('scores.index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
-            <a href="{{ url_for('scores.export', event_id=event.id, target='overall') }}" class="btn btn-success glass-effect"><i class="fa-solid fa-file-export me-1"></i> Export Overall</a>
+            <a href="{{ url_for('scores.export', event_id=event.id, target='overall') }}" class="btn btn-success glass-effect"><i class="fa-solid fa-file-csv me-1"></i> Export Overall to CSV</a>
         </div>
     </header>
 
@@ -53,7 +53,7 @@
             <h4 class="m-0">{{ seg.order_index }}. {{ seg.name }} 
                 {% if seg.percentage_weight %}<span class="text-muted text-sm fw-normal">({{ (seg.percentage_weight * 100)|int }}% Weight)</span>{% endif %}
             </h4>
-            <a href="{{ url_for('scores.export', event_id=event.id, target='segment_' ~ seg.id) }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-download me-1"></i> Export Segment</a>
+            <a href="{{ url_for('scores.export', event_id=event.id, target='segment_' ~ seg.id) }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-file-excel me-1 text-success"></i> Download Matrix</a>
         </div>
         
         <div class="table-responsive">
