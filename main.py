@@ -30,21 +30,23 @@ def create_app(test_config=None):
     from webapp.python.events import events_bp
     from webapp.python.admin import admin_bp
     from webapp.python.judge import judge_bp  
-    from webapp.python.leaderboard import leaderboard_bp  # <-- Imported new blueprint
+    from webapp.python.leaderboard import leaderboard_bp 
+    from webapp.python.scores import scores_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(events_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(judge_bp)          
-    app.register_blueprint(leaderboard_bp)                # <-- Registered new blueprint
-
+    app.register_blueprint(leaderboard_bp)                
+    app.register_blueprint(scores_bp)  
+    
+    from webapp.python.models import Event, Contestant, EventJudge
+    from webapp.python.database import SessionLocal
+    
     @app.route('/')
     @require_role()
     def index():
         user = session.get('user')
-        from webapp.python.database import SessionLocal
-        from webapp.python.models import Event, Contestant, EventJudge
-        
         db = SessionLocal()
         try:
             if user['role'] == 'judge':

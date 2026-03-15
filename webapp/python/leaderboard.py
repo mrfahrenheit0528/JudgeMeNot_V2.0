@@ -1,27 +1,21 @@
 import os
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, send_file, current_app
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
 from webapp.python.database import SessionLocal
 from webapp.python.models import Event, Contestant, Score
-from webapp.python.services import get_live_leaderboard
-from webapp.python.reporting import generate_pdf_report
 
 leaderboard_bp = Blueprint('leaderboard', __name__, url_prefix='/leaderboard')
 
 @leaderboard_bp.route('/')
 def index():
-    """Main Leaderboard Hub - Shows all events and system-wide score statistics."""
+    """Main Leaderboard Hub - Auto-redirects to the active event scoreboard."""
     db = SessionLocal()
     try:
-        events = db.query(Event).order_by(Event.last_active.desc()).all()
-        total_events = len(events)
-        total_contestants = db.query(Contestant).count()
-        total_scores = db.query(Score).count()
+        active_event = db.query(Event).filter(Event.status == 'Ongoing').order_by(Event.id.desc()).first()
         
-        return render_template('leaderboard_main.html', 
-                               events=events,
-                               total_events=total_events,
-                               total_contestants=total_contestants,
-                               total_scores=total_scores)
+        if active_event:
+            return redirect(url_for('leaderboard.detail', event_id=active_event.id))
+            
+        return render_template('leaderboard_main.html')
     finally:
         db.close()
 
@@ -35,51 +29,86 @@ def detail(event_id):
             flash("Event not found.", "error")
             return redirect(url_for('leaderboard.index'))
             
-        leaderboard_data = get_live_leaderboard(db, event_id)
+        all_active_events = db.query(Event).filter(Event.status == 'Ongoing').all()
         
-        return render_template('leaderboard_detail.html', event=event, leaderboard=leaderboard_data)
+        return render_template('leaderboard_detail.html', 
+                               event=event, 
+                               all_active_events=all_active_events)
     finally:
         db.close()
 
 @leaderboard_bp.route('/api/<int:event_id>')
 def api_detail(event_id):
-    """Real-Time Data Endpoint - Fetches the live leaderboard for the polling script."""
+    """Real-Time Data Endpoint - Calculates Prelim & Final scores, dynamically switching ranking logic."""
     db = SessionLocal()
     try:
         event = db.query(Event).filter(Event.id == event_id).first()
         if not event:
             return jsonify({"error": "Event not found"}), 404
             
-        leaderboard_data = get_live_leaderboard(db, event_id)
+        all_scores = db.query(Score).join(Contestant).filter(Contestant.event_id == event_id).all()
         
-        # Serialize data cleanly for Javascript interpretation
-        results = []
-        for row in leaderboard_data:
-            formatted_score = f"{row['score']:.2f}" if event.event_type == "Score-Based" else str(row['score'])
-            results.append({
-                "rank": row["rank"],
-                "candidate_number": row["contestant"].candidate_number or "-",
-                "name": row["contestant"].name,
-                "category": row["contestant"].gender or "Uncategorized",
-                "score": formatted_score
+        # Determine if the Final Segment has started (is active or has scores)
+        final_started = False
+        final_seg = next((s for s in event.segments if s.is_final), None)
+        if final_seg:
+            if final_seg.is_active:
+                final_started = True
+            elif any(s.segment_id == final_seg.id and s.score_value is not None for s in all_scores):
+                final_started = True
+
+        contestants_data = {}
+        for c in event.contestants:
+            cat = c.gender or "Overall"
+            if cat not in contestants_data:
+                contestants_data[cat] = []
+                
+            prelim_score = 0.0
+            final_score = 0.0
+            
+            for seg in event.segments:
+                seg_scores = []
+                for j in event.assigned_judges:
+                    j_score = sum([s.score_value for s in all_scores if s.contestant_id == c.id and s.segment_id == seg.id and s.judge_id == j.judge_id and s.score_value is not None])
+                    if j_score > 0:
+                        seg_scores.append(j_score)
+                
+                avg_seg_score = sum(seg_scores) / len(seg_scores) if seg_scores else 0.0
+                
+                w = seg.percentage_weight or 0.0
+                if w > 1.0: 
+                    w = w / 100.0  
+                
+                weighted_score = avg_seg_score * w if w > 0 else avg_seg_score
+                
+                if seg.is_final:
+                    final_score += weighted_score
+                else:
+                    prelim_score += weighted_score
+                    
+            contestants_data[cat].append({
+                "candidate_number": c.candidate_number or "-",
+                "name": c.name,
+                "prelim_score": prelim_score,
+                "final_score": final_score
             })
+            
+        results = {}
+        for cat, c_list in contestants_data.items():
+            # SMART RANKING: Sort by Final Score if started, otherwise sort by Prelim Score
+            c_list.sort(key=lambda x: x['final_score'] if final_started else x['prelim_score'], reverse=True)
+            
+            for i, c in enumerate(c_list):
+                c['rank'] = i + 1
+                c['prelim_score'] = f"{c['prelim_score']:.2f}"
+                c['final_score'] = f"{c['final_score']:.2f}"
+                
+            results[cat] = c_list
             
         return jsonify({
             "status": event.status,
+            "final_started": final_started,
             "leaderboard": results
         })
     finally:
         db.close()
-
-@leaderboard_bp.route('/<int:event_id>/export')
-def export(event_id):
-    """Triggers the PDF export and sends it directly to the user's browser."""
-    output_dir = os.path.join(current_app.static_folder, 'reports')
-    
-    success, result = generate_pdf_report(event_id, output_dir)
-    
-    if success:
-        return send_file(result, as_attachment=True)
-    else:
-        flash(f"Failed to generate report: {result}", "error")
-        return redirect(url_for('leaderboard.detail', event_id=event_id))
