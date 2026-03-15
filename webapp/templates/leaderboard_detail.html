@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.name }} - Leaderboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up">
+    <header class="page-header mb-4">
+        <div>
+            <h2>{{ event.name }} <span class="text-muted" style="font-weight: 400; font-size: 1.4rem;">| Live Leaderboard</span></h2>
+            <p class="text-muted m-0">Scores are dynamically aggregated and sorted in real-time.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('leaderboard.index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to List</a>
+            <a href="{{ url_for('leaderboard.export', event_id=event.id) }}" class="btn btn-success glass-effect" target="_blank"><i class="fa-solid fa-file-pdf me-1"></i> Export PDF</a>
+        </div>
+    </header>
+
+    <div class="glass-panel" style="padding: 0; overflow: hidden; border-radius: 12px; position: relative;">
+        
+        <!-- Live Indicator Ribbon -->
+        <div style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid rgba(16, 185, 129, 0.2); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <span class="text-success" style="font-weight: 600; font-size: 0.85rem;"><i class="fa-solid fa-satellite-dish fa-beat me-2"></i> REAL-TIME CONNECTION ACTIVE</span>
+            <span class="text-muted" style="font-size: 0.8rem; font-family: monospace;" id="lastUpdated">Updating...</span>
+        </div>
+
+        <!-- Inject the Reusable Table Partial -->
+        {% include "partials/leaderboard_table.html" %}
+        
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = "Last Synced: " + now.toLocaleTimeString();
+        }
+        updateTime();
+
+        // --- REAL-TIME POLLING FOR SCORES ---
+        setInterval(() => {
+            fetch(`{{ url_for('leaderboard.api_detail', event_id=event.id) }}?_=` + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('leaderboardBody');
+                
+                if (!data.leaderboard || data.leaderboard.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><i class="fa-solid fa-ghost fa-2x mb-2" style="opacity: 0.3;"></i><p class="m-0">No scores have been logged yet.</p></td></tr>';
+                    updateTime();
+                    return;
+                }
+
+                let html = '';
+                data.leaderboard.forEach(row => {
+                    let rankDisplay = row.rank;
+                    let rowStyle = "";
+                    let scoreStyle = "bg-secondary";
+                    
+                    // Podium Highlighting Logic
+                    if (row.rank === 1) { 
+                        rankDisplay = '<i class="fa-solid fa-medal text-warning fa-lg"></i> 1st'; 
+                        rowStyle = "background: rgba(245, 158, 11, 0.05);";
+                        scoreStyle = "bg-warning";
+                    }
+                    else if (row.rank === 2) { 
+                        rankDisplay = '<i class="fa-solid fa-medal text-secondary fa-lg" style="color: #94a3b8 !important;"></i> 2nd';
+                        scoreStyle = "bg-primary";
+                    }
+                    else if (row.rank === 3) { 
+                        rankDisplay = '<i class="fa-solid fa-medal fa-lg" style="color: #cd7f32 !important;"></i> 3rd';
+                        scoreStyle = "bg-primary";
+                    }
+
+                    html += `
+                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.3s; ${rowStyle}">
+                        <td style="padding: 15px 20px; font-weight: 700; font-size: 1.1rem;">${rankDisplay}</td>
+                        <td style="padding: 15px 20px; color: var(--text-muted); font-family: monospace; font-size: 1.1rem;">#${row.candidate_number}</td>
+                        <td style="padding: 15px 20px;"><strong style="color: var(--text-bright); font-size: 1.05rem;">${row.name}</strong></td>
+                        <td style="padding: 15px 20px; color: var(--text-muted);">${row.category}</td>
+                        <td style="padding: 15px 20px; text-align: right;">
+                            <span class="badge ${scoreStyle} text-white shadow-sm" style="font-size: 1rem; padding: 6px 12px;">${row.score}</span>
+                        </td>
+                    </tr>
+                    `;
+                });
+                
+                tbody.innerHTML = html;
+                updateTime();
+            })
+            .catch(err => console.error("Leaderboard Sync Error:", err));
+        }, 3000); // Polling every 3 seconds!
+    });
+</script>
+{% endblock %}

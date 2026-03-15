@@ -27,9 +27,10 @@ def run_seed():
     db.add_all([admin, judge1, tabulator1])
     db.flush()
 
-    # --- PAGEANT TEST ---
-    print("Creating Pageant Event...")
-    pageant = Event(name="Miss Universe 2026", event_type="PAGEANT")
+    # --- SCORE BASED TEST ---
+    print("Creating Score-Based Event...")
+    # UPDATED DB VALUE
+    pageant = Event(name="Miss Universe 2026", event_type="Score-Based", category_count=2)
     db.add(pageant)
     db.flush()
 
@@ -43,17 +44,17 @@ def run_seed():
     db.add_all([poise, beauty])
     db.flush()
 
-    c1 = Contestant(event_id=pageant.id, name="Candidate Alpha", candidate_number=1)
+    c1 = Contestant(event_id=pageant.id, name="Candidate Alpha", candidate_number=1, gender="Female")
     db.add(c1)
     db.flush()
 
-    # Pageant Score
     s1 = Score(contestant_id=c1.id, judge_id=judge1.id, segment_id=swimwear.id, criteria_id=poise.id, score_value=9.5)
     db.add(s1)
 
-    # --- QUIZ BEE TEST ---
-    print("Creating QuizBee Event...")
-    quizbee = Event(name="National IOI 2026", event_type="QUIZBEE", scoring_type="hybrid")
+    # --- POINT BASED TEST ---
+    print("Creating Point-Based Event...")
+    # UPDATED DB VALUE
+    quizbee = Event(name="National IOI 2026", event_type="Point-Based", scoring_type="hybrid")
     db.add(quizbee)
     db.flush()
 
@@ -61,26 +62,17 @@ def run_seed():
     db.add(easy_round)
     db.flush()
 
-    school1 = Contestant(event_id=quizbee.id, name="High School A", assigned_tabulator_id=tabulator1.id)
-    school2 = Contestant(event_id=quizbee.id, name="High School B", assigned_tabulator_id=tabulator1.id)
+    school1 = Contestant(event_id=quizbee.id, name="High School A", assigned_tabulator_id=tabulator1.id, gender="None")
+    school2 = Contestant(event_id=quizbee.id, name="High School B", assigned_tabulator_id=tabulator1.id, gender="None")
     db.add_all([school1, school2])
     db.flush()
 
-    # Quiz Bee Score (Question 1)
     qb_s1 = Score(contestant_id=school1.id, segment_id=easy_round.id, question_number=1, is_correct=True)
     qb_s2 = Score(contestant_id=school2.id, segment_id=easy_round.id, question_number=1, is_correct=False)
     db.add_all([qb_s1, qb_s2])
 
     db.commit()
     print("Seeding successful!")
-
-    # Verifications
-    print("\n--- Verification ---")
-    p_event = db.query(Event).filter(Event.name == "Miss Universe 2026").first()
-    print(f"Pageant Event ID {p_event.id}: {p_event.name} has {len(p_event.segments)} segments and {len(p_event.contestants)} contestants.")
-    
-    q_event = db.query(Event).filter(Event.name == "National IOI 2026").first()
-    print(f"QuizBee Event ID {q_event.id}: {q_event.name} has {len(q_event.segments)} rounds and {len(q_event.contestants)} schools.")
 
     db.close()
 

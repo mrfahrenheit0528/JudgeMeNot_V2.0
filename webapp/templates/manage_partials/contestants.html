@@ -1,0 +1,161 @@
+<!-- Participants Management Area -->
+<div class="glass-panel fade-in-up" style="animation-delay: 0.1s;">
+    <div class="panel-header">
+        <h3><i class="fa-solid fa-users text-primary me-2"></i> Contestants</h3>
+    </div>
+    
+    <!-- Quick Add Form -->
+    <form method="POST" action="{{ url_for('events.add_contestant', event_id=event.id) }}" enctype="multipart/form-data" class="quick-add-form" id="addContestantForm" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+        
+        <!-- Row 1: Number, Name, Add -->
+        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 10px; width: 100%;">
+            <input type="number" name="number" id="candidateNumberInput" class="form-control form-control-sm text-center" placeholder="#" style="width: 60px; flex-shrink: 0;" required>
+            <input type="text" name="name" class="form-control form-control-sm" placeholder="Contestant Name" style="flex: 1; min-width: 0;" required>
+            <button type="submit" class="btn btn-primary btn-sm glass-effect" style="flex: 0 0 auto;"><i class="fa-solid fa-plus me-1"></i> Add</button>
+        </div>
+
+        <!-- Row 2: Image and Category -->
+        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 10px; width: 100%;">
+            <div class="file-drop-area" id="fileDropArea" style="flex: 1; min-width: 0; padding: 0 10px; height: 38px; margin: 0; display: flex; align-items: center; justify-content: flex-start; position: relative;">
+                <span class="fake-btn" style="padding: 2px 8px; font-size: 0.75rem; margin-right: 8px; flex-shrink: 0;">Choose File</span>
+                <span class="file-msg" style="font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">or drop image</span>
+                <input class="file-input" type="file" name="image" id="contestantImage" accept="image/*">
+            </div>
+            
+            {% if event.category_count == 2 %}
+            <select name="category" id="categorySelect" class="form-select form-control-sm" style="width: 110px; flex-shrink: 0;" required>
+                <option value="Male" {% if last_category == 'Male' %}selected{% endif %}>Male</option>
+                <option value="Female" {% if last_category == 'Female' %}selected{% endif %}>Female</option>
+            </select>
+            {% else %}
+            <input type="hidden" name="category" id="categorySelect" value="None">
+            {% endif %}
+        </div>
+    </form>
+    
+    <!-- Contestants List -->
+    <div class="contestants-list mt-4">
+        {% if event.category_count == 2 %}
+            {% for cat in ['Male', 'Female'] %}
+            <h6 class="list-section-title"><i class="fa-solid fa-{% if cat == 'Male' %}mars text-primary{% else %}venus text-accent{% endif %} me-1"></i> {{ cat }} Candidates</h6>
+            <div class="admin-list-group mb-4">
+                {% for c in event.contestants|selectattr('gender','equalto',cat)|sort(attribute='candidate_number') %}
+                <div class="admin-list-item">
+                    <div class="item-info">
+                        {% if c.image_path %}<img src="{{ url_for('static', filename=c.image_path) }}" class="avatar-sm">
+                        {% else %}<div class="avatar-sm placeholder"><i class="fa-solid fa-user"></i></div>{% endif %}
+                        <span class="badge-number">#{{ c.candidate_number }}</span>
+                        <span class="item-name">{{ c.name }}</span>
+                    </div>
+                    <div class="item-actions">
+                        <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editContestantModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
+                        <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" style="display:inline;">
+                            <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove?')"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state">No {{ cat | lower }} candidates.</div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="admin-list-group">
+                {% for c in event.contestants|sort(attribute='candidate_number') %}
+                <div class="admin-list-item">
+                    <div class="item-info">
+                        {% if c.image_path %}<img src="{{ url_for('static', filename=c.image_path) }}" class="avatar-sm">
+                        {% else %}<div class="avatar-sm placeholder"><i class="fa-solid fa-user"></i></div>{% endif %}
+                        <span class="badge-number">#{{ c.candidate_number }}</span>
+                        <span class="item-name">{{ c.name }}</span>
+                    </div>
+                    <div class="item-actions">
+                        <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editContestantModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
+                        <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" style="display:inline;">
+                            <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove?')"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state text-center py-4">No contestants enlisted.</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- CONTESTANTS MODALS -->
+{% for c in event.contestants %}
+<div id="editContestantModal_{{ c.id }}" class="admin-modal">
+    <div class="glass-panel" style="width: 400px; padding: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0;">Edit Contestant</h4>
+            <button type="button" class="btn-icon-raw" onclick="this.closest('.admin-modal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form method="POST" action="{{ url_for('events.edit_contestant', event_id=event.id, contestant_id=c.id) }}" enctype="multipart/form-data" class="edit-contestant-form" data-contestant-id="{{ c.id }}">
+            <div class="row g-2 mb-3"><div class="col-3"><label>#</label><input type="number" name="number" class="form-control" value="{{ c.candidate_number }}" required></div><div class="col-9"><label>Name</label><input type="text" name="name" class="form-control" value="{{ c.name }}" required></div></div>
+            <div class="mb-3"><label>Category</label><select name="category" class="form-select" required><option value="Male" {% if c.gender == 'Male' %}selected{% endif %}>Male</option><option value="Female" {% if c.gender == 'Female' %}selected{% endif %}>Female</option></select></div>
+            <div class="mb-4"><label>Image</label><input type="file" name="image" class="form-control" accept="image/*"></div>
+            <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const existingContestants = [
+            {% for c in event.contestants %}{ id: {{ c.id }}, number: {{ c.candidate_number }}, category: "{{ c.gender }}" }{% if not loop.last %},{% endif %}{% endfor %}
+        ];
+
+        function applyErrorGlow(input) {
+            input.style.borderColor = '#ef4444';
+            input.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+            setTimeout(() => { input.style.borderColor = '#cbd5e1'; input.style.boxShadow = ''; }, 3000);
+        }
+
+        // Validate Contestant Number
+        function validateContestantNumber(e, form, currentId) {
+            const numInput = form.querySelector('input[name="number"]');
+            const number = parseInt(numInput.value);
+            const catSelect = form.querySelector('select[name="category"]') || form.querySelector('input[name="category"]');
+            const category = catSelect ? catSelect.value : 'None';
+            
+            if (existingContestants.some(c => c.number === number && c.category === category && c.id !== currentId)) {
+                e.preventDefault(); 
+                applyErrorGlow(numInput);
+                if(typeof showToast === 'function') showToast('error', `Candidate #${number} already exists in this category.`);
+            }
+        }
+        
+        document.getElementById('addContestantForm')?.addEventListener('submit', function(e) { validateContestantNumber(e, this, null); });
+        document.querySelectorAll('.edit-contestant-form').forEach(f => f.addEventListener('submit', function(e) { validateContestantNumber(e, this, parseInt(this.dataset.contestantId)); }));
+
+        // Drag & Drop logic
+        const area = document.getElementById('fileDropArea');
+        const input = document.getElementById('contestantImage');
+        if (area) {
+            ['dragenter', 'dragover'].forEach(name => area.addEventListener(name, (e) => { e.preventDefault(); area.classList.add('is-active'); }));
+            ['dragleave', 'drop'].forEach(name => area.addEventListener(name, (e) => { e.preventDefault(); area.classList.remove('is-active'); }));
+            area.addEventListener('drop', (e) => { e.preventDefault(); area.classList.remove('is-active'); input.files = e.dataTransfer.files; if(input.files.length) area.querySelector('.file-msg').textContent = input.files[0].name; });
+            input.addEventListener('change', () => { if(input.files.length) area.querySelector('.file-msg').textContent = input.files[0].name; });
+        }
+        
+        // Auto-increment number logic
+        const nextNums = {{ next_numbers | default('{}') | tojson }};
+        const catSelect = document.getElementById('categorySelect');
+        const numInput = document.getElementById('candidateNumberInput');
+        
+        function updateNum() {
+            const cat = catSelect ? (catSelect.value || 'None') : 'None';
+            if(numInput && nextNums[cat]) {
+                numInput.value = nextNums[cat];
+            }
+        }
+        
+        if (catSelect && catSelect.tagName === 'SELECT') {
+            catSelect.addEventListener('change', updateNum);
+            updateNum();
+        }
+    });
+</script>

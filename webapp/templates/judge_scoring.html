@@ -1,0 +1,675 @@
+{% extends "base.html" %}
+
+{% block title %}Scoring: {{ segment.name }}{% endblock %}
+
+{% block content %}
+<!-- Contestant Card Macro -->
+{% macro render_card(c, criteria_list, score_map, is_locked) %}
+<div class="contestant-card">
+    <div class="card-left">
+        {% if c.image_path %}
+            <img src="{{ url_for('static', filename=c.image_path) }}" alt="{{ c.name }}" class="contestant-img clickable-img" onclick="openImageModal('{{ url_for('static', filename=c.image_path) }}', '{{ c.name }}')">
+        {% else %}
+            <div class="contestant-img placeholder-img">
+                <i class="fa-solid fa-user"></i>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-right">
+        <div class="contestant-header">
+            <span class="badge-number">#{{ c.candidate_number }}</span>
+            <span class="candidate-name">{{ c.name }}</span>
+        </div>
+        
+        <div class="criteria-container">
+            {% for crit in criteria_list %}
+            <div class="criteria-row score-wrapper">
+                
+                <!-- Top Row: Name and Meta info -->
+                <div class="crit-header">
+                    <div class="crit-name" title="{{ crit.name }}">
+                        {{ crit.name }}
+                    </div>
+                    <div class="crit-meta">
+                        /{{ crit.max_score }} <span class="crit-weight">({{ (crit.weight * 100)|int }}%)</span>
+                    </div>
+                </div>
+                
+                <!-- Bottom Row: Slider and Input -->
+                <div class="crit-controls">
+                    <input type="range" 
+                           class="score-slider" 
+                           data-contestant-id="{{ c.id }}" 
+                           data-criteria-id="{{ crit.id }}"
+                           max="{{ crit.max_score }}" 
+                           min="0" 
+                           step="0.1"
+                           value="{{ score_map.get(c.id, {}).get(crit.id, 0) }}"
+                           oninput="updatePairedInput(this, '.score-input')"
+                           onchange="saveScore(this)"
+                           {% if is_locked %}disabled{% endif %}>
+                           
+                    <div class="input-container">
+                        <input type="number" 
+                               class="score-input" 
+                               data-contestant-id="{{ c.id }}" 
+                               data-criteria-id="{{ crit.id }}"
+                               max="{{ crit.max_score }}" 
+                               min="0" 
+                               step="0.1"
+                               value="{{ score_map.get(c.id, {}).get(crit.id, '') }}"
+                               oninput="updatePairedInput(this, '.score-slider')"
+                               onblur="saveScore(this)"
+                               {% if is_locked %}disabled{% endif %}>
+                        
+                        <i class="fa-solid status-icon"></i>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+<div class="dashboard-container">
+    <header class="page-header mb-4">
+        <div>
+            <h2>{{ segment.name }}</h2>
+            <p class="text-muted"><i class="fa-solid fa-trophy me-2"></i>{{ event.name }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
+        </div>
+    </header>
+
+    {% if not criteria_list %}
+        <div class="alert alert-warning text-center p-4">
+            <h4>No Criteria Found</h4>
+            <p>The admin has not set up scoring criteria for this segment yet.</p>
+        </div>
+    {% elif not contestants %}
+        <div class="alert alert-secondary text-center p-5">
+            <h4>No Contestants</h4>
+            <p>There are no contestants enrolled in this event yet.</p>
+        </div>
+    {% else %}
+        
+        <!-- WAITING AREA (Visible when locked) -->
+        <div id="waitingArea" class="waiting-container" style="{% if not is_locked %}display: none;{% endif %}">
+            <div class="waiting-card fade-in-up">
+                <div class="success-icon">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h3>Scores Locked Successfully!</h3>
+                <p class="text-muted mt-2">Thank you! Your scores for <strong>{{ segment.name }}</strong> have been securely submitted to the tabulators and can no longer be edited.</p>
+                
+                <div class="waiting-indicator">
+                    <i class="fa-solid fa-spinner fa-spin text-primary"></i>
+                    <span>Waiting for the next segment to be activated...</span>
+                </div>
+
+                <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg mt-4 px-5"><i class="fa-solid fa-arrow-left me-2"></i> Return to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- SCORING AREA (Visible when NOT locked) -->
+        <div id="scoringArea" style="{% if is_locked %}display: none;{% endif %}">
+            <!-- Category Grouping -->
+            {% set valid_contestants = contestants | rejectattr('gender', 'none') | rejectattr('gender', 'equalto', 'None') | rejectattr('gender', 'equalto', '') %}
+            {% set grouped = valid_contestants | groupby('gender') %}
+            
+            {% set none_type = contestants | selectattr('gender', 'none') | list %}
+            {% set none_str = contestants | selectattr('gender', 'equalto', 'None') | list %}
+            {% set empty_str = contestants | selectattr('gender', 'equalto', '') | list %}
+            {% set unassigned = none_type + none_str + empty_str %}
+            
+            <div class="category-grid">
+                {% for category, group in grouped %}
+                    <div class="category-column">
+                        <h4 class="category-title">{{ category }} Candidates</h4>
+                        <div class="cards-wrapper">
+                            {% for c in group %}
+                                {{ render_card(c, criteria_list, score_map, is_locked) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+                {% if unassigned %}
+                    <div class="category-column">
+                        <h4 class="category-title">{% if grouped|length > 0 %}Uncategorized{% else %}All Candidates{% endif %}</h4>
+                        <div class="cards-wrapper">
+                            {% for c in unassigned %}
+                                {{ render_card(c, criteria_list, score_map, is_locked) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Global Actions Area -->
+            <div class="submit-area">
+                <p class="text-muted mb-4"><i class="fa-solid fa-circle-info text-primary me-1"></i> <strong>Auto-Save is active.</strong> Adjust the slider or type a number to save instantly.</p>
+                
+                <button id="lockScoresBtn" class="btn btn-primary btn-lg px-5" onclick="lockAndSubmitScores()">
+                    <i class="fa-solid fa-lock me-2"></i> Lock & Submit All Scores
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Image Preview Modal -->
+<div id="imageModal" class="image-modal-backdrop" onclick="closeImageModal()" style="display: none;">
+    <div class="image-modal-container" onclick="event.stopPropagation()">
+        <div class="image-modal-header">
+            <h4 id="imageModalTitle" class="m-0 text-white" style="margin: 0; color: white;"></h4>
+            <button class="image-modal-close" onclick="closeImageModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <img id="imageModalImg" src="" alt="Preview">
+    </div>
+</div>
+
+<!-- Simplified & Strict CSS Layout -->
+<style>
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* WAITING AREA STYLES */
+    .waiting-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+    
+    .waiting-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 50px 40px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border: 1px solid #eee;
+        max-width: 550px;
+        width: 100%;
+    }
+    
+    .success-icon {
+        font-size: 5rem;
+        color: #10b981;
+        margin-bottom: 25px;
+    }
+    
+    .waiting-indicator {
+        margin-top: 35px;
+        padding: 18px;
+        background: #f8fafc;
+        border-radius: 8px;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-weight: 500;
+        font-size: 1.05rem;
+    }
+
+    /* Grid for Categories (Side by Side) */
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 30px;
+        align-items: start;
+    }
+
+    .category-title {
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: #333;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #eee;
+    }
+
+    .cards-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    /* Card Structure */
+    .contestant-card {
+        display: flex;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Left Side (Image) */
+    .card-left {
+        flex: 0 0 120px; /* Fixed width for image */
+        margin-right: 20px;
+    }
+
+    .contestant-img {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid #eee;
+    }
+
+    .placeholder-img {
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #aaa;
+    }
+
+    /* Clickable Image Styles */
+    .clickable-img {
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .clickable-img:hover {
+        transform: scale(1.03);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10;
+        position: relative;
+    }
+
+    /* Image Modal Styles */
+    .image-modal-backdrop {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+        z-index: 10000; display: flex; justify-content: center; align-items: center;
+    }
+    
+    .image-modal-container {
+        background: #1e293b; padding: 15px; border-radius: 8px;
+        max-width: 90%; max-height: 95vh; display: flex; flex-direction: column;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    
+    .image-modal-header {
+        display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+    }
+    
+    .image-modal-close {
+        background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; transition: color 0.2s;
+    }
+    
+    .image-modal-close:hover {
+        color: white;
+    }
+    
+    #imageModalImg {
+        max-width: 100%; max-height: calc(90vh - 70px); object-fit: contain; border-radius: 4px;
+    }
+
+    /* Right Side (Info & Criteria) */
+    .card-right {
+        flex: 1;
+        min-width: 0; /* Prevents flex blowout */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .contestant-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .badge-number {
+        background: #000;
+        color: #fff;
+        font-weight: bold;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+
+    .candidate-name {
+        font-weight: bold;
+        font-size: 1.2rem;
+        color: #111;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Criteria Rows */
+    .criteria-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px; /* Spacing between different criteria */
+    }
+
+    .criteria-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px; /* Spacing between name and slider */
+    }
+    
+    .crit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .crit-name {
+        font-weight: bold;
+        font-size: 0.95rem;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .crit-meta {
+        font-size: 0.8rem;
+        color: #666;
+        white-space: nowrap;
+    }
+    
+    .crit-weight {
+        color: #aaa;
+    }
+
+    .crit-controls {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+    }
+
+    .score-slider {
+        flex: 1; /* Forces the slider to stretch and fill all available space */
+        cursor: pointer;
+    }
+
+    .input-container {
+        position: relative;
+        flex: 0 0 60px; /* Fixed width for the input box */
+    }
+
+    .score-input {
+        width: 100%;
+        height: 30px;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 0.95rem;
+        font-weight: bold;
+    }
+
+    .score-input:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+
+    .score-input:disabled, .score-slider:disabled {
+        background: #f8f9fa;
+        cursor: not-allowed;
+    }
+
+    /* Remove arrows from number input */
+    .score-input::-webkit-outer-spin-button,
+    .score-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .score-input[type=number] {
+        -moz-appearance: textfield;
+    }
+
+    /* Status Icon Positioning */
+    .status-icon {
+        position: absolute;
+        right: -18px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.8rem;
+        color: transparent;
+    }
+
+    .submit-area {
+        margin-top: 50px;
+        text-align: center;
+        padding-top: 30px;
+        border-top: 1px solid #eee;
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Look at the current URL to figure out if the judge is already scoring a segment
+        // Example: http://127.0.0.1:5000/judge/scoring/3/8
+        const currentPath = window.location.pathname;
+        let currentSegmentId = null;
+        
+        if (currentPath.includes('/judge/scoring/')) {
+            const pathParts = currentPath.split('/');
+            // Grab the last number from the URL, which is the segment ID (e.g., the '8')
+            currentSegmentId = parseInt(pathParts[pathParts.length - 1]); 
+        }
+
+        // Check for updates every 3 seconds
+        setInterval(function() {
+            fetch('/events/api/{{ event.id }}/status')
+                .then(response => response.json())
+                .then(data => {
+                    const activeSegmentId = data.active_segment_id;
+                    
+                    // CASE 1: Admin activated a segment, AND it's a completely new/different segment
+                    if (activeSegmentId !== null && activeSegmentId !== currentSegmentId) {
+                        // Send them to the correct scoring URL with both the Event ID and Segment ID
+                        window.location.href = `/judge/scoring/{{ event.id }}/${activeSegmentId}`;
+                    }
+                    
+                    // CASE 2: Admin paused/deactivated the segment, but the judge is still on the scoring page
+                    else if (activeSegmentId === null && currentSegmentId !== null) {
+                        // Reload the page so your backend securely kicks them back to the waiting room
+                        window.location.reload();
+                    }
+                    
+                    // CASE 3: activeSegmentId == currentSegmentId
+                    // Do absolutely nothing! Let them score in peace.
+                })
+                .catch(err => console.log("Polling for updates...", err));
+        }, 3000);
+    });
+    function updatePairedInput(element, targetSelector) {
+        const wrapper = element.closest('.score-wrapper');
+        const target = wrapper.querySelector(targetSelector);
+        if (target) {
+            target.value = element.value;
+        }
+    }
+
+    function saveScore(inputElement) {
+        if(inputElement.disabled) return;
+        
+        const wrapper = inputElement.closest('.score-wrapper');
+        const numInput = wrapper.querySelector('.score-input');
+        const icon = wrapper.querySelector('.status-icon');
+        
+        const contestantId = numInput.getAttribute('data-contestant-id');
+        const criteriaId = numInput.getAttribute('data-criteria-id');
+        const scoreValue = numInput.value;
+        const maxScore = parseFloat(numInput.getAttribute('max'));
+        
+        numInput.style.borderColor = '#ccc';
+        icon.className = 'fa-solid fa-spinner fa-spin status-icon';
+        icon.style.color = '#666';
+        
+        if(scoreValue !== '') {
+            if (parseFloat(scoreValue) > maxScore || parseFloat(scoreValue) < 0) {
+                numInput.style.borderColor = 'red';
+                icon.className = 'fa-solid fa-circle-exclamation status-icon';
+                icon.style.color = 'red';
+                alert(`Score must be between 0 and ${maxScore}.`);
+                return;
+            }
+        } else {
+            icon.style.color = 'transparent';
+            return;
+        }
+
+        fetch("{{ url_for('judge.api_submit_score') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                segment_id: {{ segment.id }},
+                contestant_id: contestantId,
+                criteria_id: criteriaId,
+                score_value: scoreValue
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                numInput.style.borderColor = 'green';
+                icon.className = 'fa-solid fa-circle-check status-icon';
+                icon.style.color = 'green';
+                
+                setTimeout(() => {
+                    numInput.style.borderColor = '#ccc';
+                    icon.style.color = 'transparent';
+                }, 2000);
+            } else {
+                numInput.style.borderColor = 'red';
+                icon.className = 'fa-solid fa-circle-exclamation status-icon';
+                icon.style.color = 'red';
+                alert("Error: " + data.message);
+                
+                if(data.message.includes("locked")) {
+                    // Transition UI to Locked Mode on the fly if it was locked elsewhere
+                    document.getElementById('scoringArea').style.display = 'none';
+                    document.getElementById('waitingArea').style.display = 'flex';
+                }
+            }
+        })
+        .catch((error) => {
+            numInput.style.borderColor = 'red';
+            icon.className = 'fa-solid fa-circle-exclamation status-icon';
+            icon.style.color = 'red';
+            console.error('Error:', error);
+        });
+    }
+    
+    function lockAndSubmitScores() {
+        // --- Validation Check: Look for empty scores ---
+        const allInputs = document.querySelectorAll('.score-input');
+        const missingData = new Map();
+
+        allInputs.forEach(input => {
+            if (input.value.trim() === '') {
+                const card = input.closest('.contestant-card');
+                const candidateNum = card.querySelector('.badge-number').innerText;
+                const candidateName = card.querySelector('.candidate-name').innerText;
+                const label = `${candidateNum} ${candidateName}`;
+                
+                const critName = input.closest('.score-wrapper').querySelector('.crit-name').innerText.trim();
+                
+                if (!missingData.has(label)) {
+                    missingData.set(label, []);
+                }
+                missingData.get(label).push(critName);
+                
+                // Highlight the empty input in red for visual feedback
+                input.style.borderColor = 'red';
+                input.closest('.score-wrapper').querySelector('.status-icon').className = 'fa-solid fa-circle-exclamation status-icon';
+                input.closest('.score-wrapper').querySelector('.status-icon').style.color = 'red';
+            }
+        });
+
+        if (missingData.size > 0) {
+            let alertMsg = "Submission blocked! Please complete all scores for the following contestants:\n\n";
+            missingData.forEach((criteriaList, candidate) => {
+                alertMsg += `• ${candidate}\n   Missing: ${criteriaList.join(', ')}\n\n`;
+            });
+            alert(alertMsg);
+            return; // Stop the function here
+        }
+        // --- End Validation Check ---
+
+        if(confirm("Are you sure you want to lock and submit your scores for this segment? You will not be able to edit them afterwards.")) {
+            const btn = document.getElementById('lockScoresBtn');
+            const originalHTML = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Locking...';
+            btn.disabled = true;
+
+            fetch("{{ url_for('judge.api_lock_segment') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ segment_id: {{ segment.id }} })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // SWAP VISIBILITY OF SECTIONS
+                    document.getElementById('scoringArea').style.display = 'none';
+                    document.getElementById('waitingArea').style.display = 'flex';
+                } else {
+                    alert("Error: " + data.message);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert("A network error occurred.");
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            });
+        }
+    }
+    
+    // --- Image Modal Functions ---
+    function openImageModal(src, name) {
+        document.getElementById('imageModalImg').src = src;
+        document.getElementById('imageModalTitle').innerText = name;
+        document.getElementById('imageModal').style.display = 'flex';
+    }
+    
+    function closeImageModal() {
+        document.getElementById('imageModal').style.display = 'none';
+        document.getElementById('imageModalImg').src = ''; // Clear source to prevent ghosting
+    }
+    
+    // Allow closing the modal with the Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('imageModal').style.display === 'flex') {
+            closeImageModal();
+        }
+    });
+    
+    // -----------------------------
+
+    document.querySelectorAll('.score-input').forEach(input => {
+        input.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                this.blur(); 
+            }
+        });
+    });
+</script>
+{% endblock %}

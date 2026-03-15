@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Global Leaderboards{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up">
+    <header class="page-header mb-4">
+        <div>
+            <h2><i class="fa-solid fa-trophy text-warning me-2"></i> Global Leaderboards</h2>
+            <p class="text-muted m-0">Monitor real-time rankings and scores across all system events.</p>
+        </div>
+    </header>
+
+    <!-- Global Statistics Banner -->
+    <div class="stats-grid mb-5">
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.1s;">
+            <div class="stat-icon bg-gradient-primary"><i class="fa-solid fa-calendar-star"></i></div>
+            <div class="stat-content">
+                <p class="stat-label">Total Events</p>
+                <h3 class="stat-value">{{ total_events }}</h3>
+            </div>
+        </div>
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.2s;">
+            <div class="stat-icon bg-gradient-accent"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-content">
+                <p class="stat-label">Total Candidates</p>
+                <h3 class="stat-value">{{ total_contestants }}</h3>
+            </div>
+        </div>
+        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.3s;">
+            <div class="stat-icon bg-gradient-secondary"><i class="fa-solid fa-square-poll-vertical"></i></div>
+            <div class="stat-content">
+                <p class="stat-label">Total Scores Logged</p>
+                <h3 class="stat-value">{{ total_scores }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Selection List -->
+    <div class="glass-panel" style="padding: 0; overflow: hidden; border-radius: 12px;">
+        <div class="panel-header px-4 py-3 border-bottom bg-light">
+            <h4 class="m-0"><i class="fa-solid fa-list me-2 text-primary"></i> Select an Event</h4>
+        </div>
+        <table class="table mb-0" style="width: 100%; border-collapse: collapse;">
+            <thead style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.05);">
+                <tr>
+                    <th style="padding: 15px 20px; text-align: left; color: var(--text-muted); font-weight: 600;">Event Name</th>
+                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Type</th>
+                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Status</th>
+                    <th style="padding: 15px 20px; text-align: right; color: var(--text-muted); font-weight: 600;">Rankings</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr style="border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;">
+                    <td style="padding: 15px 20px;">
+                        <strong style="color: var(--text-bright); font-size: 1.05rem;">{{ event.name }}</strong>
+                    </td>
+                    <td style="padding: 15px 20px; text-align: center;">
+                        <span class="badge bg-secondary text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">{{ event.event_type }}</span>
+                    </td>
+                    <td style="padding: 15px 20px; text-align: center;">
+                        {% if event.status == 'Ongoing' %}
+                            <span class="badge bg-success text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;"><i class="fa-solid fa-circle text-white me-1" style="font-size: 0.5rem; vertical-align: middle;"></i> Active</span>
+                        {% else %}
+                            <span class="badge bg-warning text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;"><i class="fa-solid fa-circle text-white me-1" style="font-size: 0.5rem; vertical-align: middle;"></i> Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px 20px; text-align: right;">
+                        <a href="{{ url_for('leaderboard.detail', event_id=event.id) }}" class="btn btn-sm btn-primary glass-effect"><i class="fa-solid fa-chart-simple me-1"></i> View Live Scores</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-clipboard-question fa-2x mb-2" style="opacity: 0.3;"></i>
+                        <p class="m-0">No events available to display.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
+</style>
+{% endblock %}

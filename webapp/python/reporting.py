@@ -10,8 +10,7 @@ from webapp.python.services import get_live_leaderboard
 
 def generate_pdf_report(event_id: int, output_dir: str = "reports"):
     """
-    Generates a PDF report for a given event, regardless if it's a Pageant or Quiz Bee,
-    utilizing the universal live leaderboard getter.
+    Generates a PDF report for a given event.
     """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -29,13 +28,11 @@ def generate_pdf_report(event_id: int, output_dir: str = "reports"):
         elements = []
         styles = getSampleStyleSheet()
 
-        # Title
         elements.append(Paragraph(f"<b>Official Results: {event.name}</b>", styles['Title']))
         elements.append(Spacer(1, 12))
         elements.append(Paragraph(f"Event Type: {event.event_type} | Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
         elements.append(Spacer(1, 24))
 
-        # Leaderboard Table Data
         leaderboard = get_live_leaderboard(db, event_id)
         table_data = [["Rank", "Candidate / School", "Total Score"]]
 
@@ -43,13 +40,13 @@ def generate_pdf_report(event_id: int, output_dir: str = "reports"):
             table_data.append([
                 str(row["rank"]),
                 row["contestant"].name,
-                f"{row['score']:.2f}" if event.event_type == "PAGEANT" else str(row["score"])
+                # UPDATED DB LOGIC CHECK
+                f"{row['score']:.2f}" if event.event_type == "Score-Based" else str(row["score"])
             ])
 
         if len(table_data) == 1:
             table_data.append(["-", "No entries yet", "-"])
 
-        # Table Styling
         table = Table(table_data, colWidths=[60, 250, 100])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -65,8 +62,6 @@ def generate_pdf_report(event_id: int, output_dir: str = "reports"):
         elements.append(table)
         elements.append(Spacer(1, 48))
 
-        # Signatories Section
-        # For simplicity, we get all admins
         admins = db.query(User).filter(User.role == "admin").all()
         elements.append(Paragraph("<b>Certified True and Correct:</b>", styles['Normal']))
         elements.append(Spacer(1, 24))
@@ -85,7 +80,7 @@ def generate_pdf_report(event_id: int, output_dir: str = "reports"):
                 "System Administrator",
                 ""
             ])
-            signatory_data.append(["", ""]) # spacer
+            signatory_data.append(["", ""])
 
         if signatory_data:
             sig_table = Table(signatory_data, colWidths=[200, 200])

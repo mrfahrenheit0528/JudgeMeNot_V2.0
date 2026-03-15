@@ -5,7 +5,7 @@
 {% block content %}
 <div class="dashboard-container fade-in-up">
     <!-- Welcome Header Section -->
-    <header class="page-header">
+    <header class="page-header mb-4">
         <div>
             <h2>Dashboard Overview</h2>
             <p class="text-muted">Welcome back to the JudgeMeNot Tabulation System</p>
@@ -22,7 +22,7 @@
 
     <!-- Stat Cards -->
     <div class="stats-grid">
-        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.1s; cursor: pointer;" onclick="document.getElementById('activeEventsModal').style.display='flex';" title="Click to view all active events">
+        <div class="stat-card glass-panel fade-in-up hover-elevate" style="animation-delay: 0.1s; cursor: pointer;" onclick="document.getElementById('activeEventsModal').style.display='flex';" title="Click to view all active events">
             <div class="stat-icon bg-gradient-primary">
                 <i class="fa-solid fa-calendar-check"></i>
             </div>
@@ -48,7 +48,8 @@
             </div>
         </div>
 
-        <div class="stat-card glass-panel fade-in-up" style="animation-delay: 0.3s;">
+        <!-- NEW: Clickable Scores Card -->
+        <div class="stat-card glass-panel fade-in-up hover-elevate" style="animation-delay: 0.3s; cursor: pointer;" onclick="window.location.href='{{ url_for('scores.index') }}'" title="View Comprehensive Score Matrices">
             <div class="stat-icon bg-gradient-accent">
                 <i class="fa-solid fa-clipboard-check"></i>
             </div>
@@ -69,7 +70,6 @@
         <div class="glass-panel recent-activity fade-in-up" style="animation-delay: 0.4s;">
             <div class="panel-header">
                 <h3>Current Events</h3>
-                <a href="#" class="view-all">View All</a>
             </div>
 
             <div class="event-list">
@@ -81,11 +81,10 @@
                     <div class="event-info">
                         <h4>{{ event.name }}</h4>
                         <p class="text-sm text-muted">
-                            {{ event.event_type }} 
-                            {% if event.event_type == 'PAGEANT' %}• Score-Based{% else %}• Point-Based{% endif %}
+                            {{ event.event_type }}
                         </p>
                         <div class="progress-bar-container mt-2">
-                            <div class="progress-bar {% if event.event_type == 'PAGEANT' %}bg-accent{% else %}bg-primary{% endif %}" style="width: {% if event.segments %}50%{% else %}10%{% endif %};"></div>
+                            <div class="progress-bar {% if event.event_type == 'Score-Based' %}bg-accent{% else %}bg-primary{% endif %}" style="width: {% if event.segments %}50%{% else %}10%{% endif %};"></div>
                         </div>
                     </div>
                     <div class="event-actions">
@@ -95,7 +94,7 @@
                             
                             <form method="POST" action="{{ url_for('events.launch', event_id=event.id) }}" style="display:inline;">
                                 {% if event.status == 'Ongoing' %}
-                                <button type="submit" class="btn btn-warning btn-sm glass-effect" onclick="promptDeactivate(event, this.form, 'Are you sure you want to pause/deactivate this event?')">
+                                <button type="button" class="btn btn-warning btn-sm glass-effect" onclick="promptDeactivate(event, this.form, 'Are you sure you want to pause/deactivate this event?')">
                                     <i class="fa-solid fa-stop"></i> Deactivate
                                 </button>
                                 {% else %}
@@ -123,18 +122,25 @@
             </div>
 
             <div class="actions-grid">
-                <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.criteria') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
-                    <div class="action-icon text-primary"><i class="fa-solid fa-list-check"></i></div>
-                    <span>Manage Criteria</span>
+                <!-- Manage Events -->
+                <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.events') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
+                    <div class="action-icon text-primary"><i class="fa-solid fa-calendar-days"></i></div>
+                    <span>Manage Events</span>
                 </a>
-                <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.judges') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
-                    <div class="action-icon text-accent"><i class="fa-solid fa-users-viewfinder"></i></div>
-                    <span>Assign Judges</span>
+                
+                <!-- Users -->
+                <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.users') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
+                    <div class="action-icon text-accent"><i class="fa-solid fa-users-gear"></i></div>
+                    <span>Users</span>
                 </a>
-                <a href="{{ url_for('leaderboard') }}" class="action-card" style="text-decoration: none; color: inherit;">
-                    <div class="action-icon text-secondary"><i class="fa-solid fa-trophy"></i></div>
-                    <span>View Leaderboard</span>
+                
+                <!-- Security Logs -->
+                <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.logs') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
+                    <div class="action-icon text-secondary"><i class="fa-solid fa-shield-halved"></i></div>
+                    <span>Security Logs</span>
                 </a>
+                
+                <!-- System Settings -->
                 <a href="{% if session.user.role == 'admin' %}{{ url_for('admin.settings') }}{% else %}#{% endif %}" class="action-card" style="text-decoration: none; color: inherit; {% if session.user.role != 'admin' %}opacity: 0.5; cursor: not-allowed;{% endif %}">
                     <div class="action-icon text-muted"><i class="fa-solid fa-gear"></i></div>
                     <span>System Settings</span>
@@ -147,9 +153,9 @@
 <!-- Active Events Modal -->
 <div id="activeEventsModal" class="modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(4, 11, 22, 0.7); backdrop-filter: blur(8px); z-index:9999; justify-content:center; align-items:center;">
     <div class="glass-panel p-4" style="min-width: 500px; max-width: 90%; max-height: 85vh; overflow-y: auto;">
-        <div class="d-flex justify-content-between align-items-center mb-3 text-white">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color: white;">
             <h4 style="margin:0;"><i class="fa-solid fa-calendar-check text-primary me-2"></i>Active Events</h4>
-            <button type="button" onclick="this.closest('.modal-backdrop').style.display='none'" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">&times;</button>
+            <button type="button" onclick="this.closest('.modal-backdrop').style.display='none'" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
         </div>
         
         <div class="list-group" style="border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.9);">
@@ -161,7 +167,7 @@
                         <strong>{{ ev.name }}</strong>
                         <span style="background:#10b981; color:white; padding:2px 6px; border-radius:12px; font-size:0.65rem; font-weight:600;">ONGOING</span>
                     </h6>
-                    <small class="text-muted">{{ ev.event_type }} • {% if ev.event_type == 'PAGEANT' %}Score-Based{% else %}Point-Based{% endif %}</small>
+                    <small class="text-muted">{{ ev.event_type }}</small>
                 </div>
                 <a href="{{ url_for('events.manage', event_id=ev.id) }}" class="btn btn-outline-primary btn-sm glass-effect" style="text-decoration:none;">Manage</a>
             </div>
@@ -175,4 +181,9 @@
         </div>
     </div>
 </div>
+
+<style>
+    .hover-elevate { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .hover-elevate:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+</style>
 {% endblock %}

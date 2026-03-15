@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up">
+    <header class="page-header mb-4">
+        <div>
+            <h2><i class="fa-solid fa-users-gear text-accent me-2"></i> User Management</h2>
+            <p class="text-muted m-0">Create, edit, and remove access for system users.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
+            <button class="btn btn-primary glass-effect" onclick="document.getElementById('addUserModal').style.display='flex'"><i class="fa-solid fa-plus me-1"></i> New User</button>
+        </div>
+    </header>
+
+    <div class="glass-panel" style="padding: 0; overflow: hidden; border-radius: 12px;">
+        <table class="table mb-0" style="width: 100%; border-collapse: collapse;">
+            <thead style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.05);">
+                <tr>
+                    <th style="padding: 15px 20px; text-align: left; color: var(--text-muted); font-weight: 600;">Name</th>
+                    <th style="padding: 15px 20px; text-align: left; color: var(--text-muted); font-weight: 600;">Username</th>
+                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Role</th>
+                    <th style="padding: 15px 20px; text-align: right; color: var(--text-muted); font-weight: 600;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr style="border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;">
+                    <td style="padding: 15px 20px;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width: 35px; height: 35px; border-radius: 50%; background: var(--bg-surface-elevated); border: 1px solid rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; color: var(--primary);">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <strong style="color: var(--text-bright); font-size: 1rem;">{{ user.name or 'N/A' }}</strong>
+                        </div>
+                    </td>
+                    <td style="padding: 15px 20px; color: var(--text-muted);">
+                        {{ user.username }}
+                    </td>
+                    <td style="padding: 15px 20px; text-align: center;">
+                        {% if user.role == 'admin' %}
+                            <span class="badge bg-danger text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Admin</span>
+                        {% elif user.role == 'judge' %}
+                            <span class="badge bg-primary text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Judge</span>
+                        {% elif user.role == 'tabulator' %}
+                            <span class="badge bg-secondary text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Tabulator</span>
+                        {% else %}
+                            <span class="badge bg-warning text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">{{ user.role }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px 20px; text-align: right;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary glass-effect" onclick="document.getElementById('editUserModal_{{ user.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i> Edit</button>
+                        {% if user.username != 'admin' %}
+                        <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-outline-danger glass-effect ms-1" onclick="return confirm('Are you sure you want to delete user {{ user.username }}?')"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-5 text-muted">
+                        No users found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- EXTRACTED EDIT USER MODALS TO ROOT LEVEL -->
+{% for user in users %}
+<div id="editUserModal_{{ user.id }}" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div class="glass-panel" style="width: 100%; max-width: 450px; padding: 25px; border-radius: 12px; background: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h4 style="margin: 0;">Edit User</h4>
+            <button type="button" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);" onclick="this.closest('#editUserModal_{{ user.id }}').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+            <div class="form-group mb-3">
+                <label class="form-label text-muted fw-bold" style="font-size: 0.85rem;">Full Name</label>
+                <input type="text" name="name" class="form-control" value="{{ user.name }}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label text-muted fw-bold" style="font-size: 0.85rem;">Username</label>
+                <input type="text" name="username" class="form-control" value="{{ user.username }}" required {% if user.username == 'admin' %}readonly title="Cannot change master admin username"{% endif %}>
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label text-muted fw-bold" style="font-size: 0.85rem;">System Role</label>
+                <select name="role" class="form-select" {% if user.username == 'admin' %}disabled{% endif %}>
+                    <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrator</option>
+                    <option value="admin-viewer" {% if user.role == 'admin-viewer' %}selected{% endif %}>Admin Viewer (Read Only)</option>
+                    <option value="judge" {% if user.role == 'judge' %}selected{% endif %}>Judge</option>
+                    <option value="tabulator" {% if user.role == 'tabulator' %}selected{% endif %}>Tabulator</option>
+                </select>
+                {% if user.username == 'admin' %}
+                <input type="hidden" name="role" value="admin">
+                {% endif %}
+            </div>
+            <div class="form-group mb-4 p-3 rounded" style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.05);">
+                <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.85rem;"><i class="fa-solid fa-lock me-1"></i> Reset Password</label>
+                <p class="text-muted mb-2" style="font-size: 0.75rem;">Leave blank if you do not wish to change the password.</p>
+                <input type="password" name="password" class="form-control form-control-sm" placeholder="New Password">
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Add User Modal -->
+<div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div class="glass-panel" style="width: 100%; max-width: 450px; padding: 25px; border-radius: 12px; background: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h4 style="margin: 0;">Create New User</h4>
+            <button type="button" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('addUserModal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <form method="POST" action="{{ url_for('admin.add_user') }}">
+            <div class="form-group mb-3">
+                <label class="form-label text-muted fw-bold" style="font-size: 0.85rem;">Full Name</label>
+                <input type="text" name="name" class="form-control" placeholder="e.g. John Doe" required>
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label text-muted fw-bold" style="font-size: 0.85rem;">Username</label>
+                <input type="text" name="username" class="form-control" placeholder="e.g. john.doe" required>
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label text-muted fw-bold" style="font-size: 0.85rem;">System Role</label>
+                <select name="role" class="form-select" required>
+                    <option value="" disabled selected>Select a role...</option>
+                    <option value="admin">Administrator</option>
+                    <option value="admin-viewer">Admin Viewer (Read Only)</option>
+                    <option value="judge">Judge</option>
+                    <option value="tabulator">Tabulator</option>
+                </select>
+            </div>
+            <div class="form-group mb-4">
+                <label class="form-label text-muted fw-bold" style="font-size: 0.85rem;">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="Temporary Password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100">Create Account</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
+</style>
+{% endblock %}

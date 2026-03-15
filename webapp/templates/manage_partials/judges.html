@@ -1,0 +1,116 @@
+<!-- Judges Assign Area -->
+<div class="glass-panel fade-in-up judges-panel">
+    <div class="panel-header">
+        <h3><i class="fa-solid fa-gavel text-secondary me-2"></i> Assigned Judges</h3>
+    </div>
+    
+    <!-- Quick Add Form -->
+    <form method="POST" action="{{ url_for('events.add_judge', event_id=event.id) }}" class="quick-add-form" id="addJudgeForm" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 12px; width: 100%;">
+        <select name="judge_id" class="form-select form-control-sm" style="flex: 1; min-width: 0;" required>
+            <option value="" disabled selected>Select Judge account...</option>
+            {% for judge in eligible_judges %}
+                {% if judge.role == 'judge' %}
+                <option value="{{ judge.id }}">{{ judge.name or judge.username }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        
+        <button type="button" class="btn btn-outline-secondary btn-sm bg-white" title="Create New Judge" onclick="document.getElementById('judgeModal').style.display='flex'" style="flex: 0 0 auto;"><i class="fa-solid fa-user-plus"></i></button>
+        
+        <div class="form-check-custom" style="flex: 0 0 auto; white-space: nowrap;">
+            <input type="checkbox" name="is_chairman" id="is_chairman" {% if has_chairman %}disabled title="Chairman is already assigned"{% endif %}>
+            <label for="is_chairman" {% if has_chairman %}title="Chairman is already assigned" class="text-muted opacity-50"{% endif %}>Chairman?</label>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-sm glass-effect" style="flex: 0 0 auto;"><i class="fa-solid fa-plus me-1"></i> Assign</button>
+    </form>
+
+    <!-- Judges List -->
+    <div class="admin-list-group mt-3">
+        {% for assignment in event.assigned_judges %}
+        <div class="admin-list-item">
+            <div class="item-info">
+                <div class="avatar-sm placeholder bg-light text-secondary"><i class="fa-solid fa-user-tie"></i></div>
+                <span class="item-name">{{ assignment.judge.name or assignment.judge.username }}</span>
+                {% if assignment.is_chairman %}
+                <span class="badge bg-accent text-white" style="font-size: 0.65rem; border-radius: 4px; padding: 3px 6px;">Chairman</span>
+                {% endif %}
+            </div>
+            <div class="item-actions">
+                <button type="button" class="btn-icon-raw text-secondary" title="Edit Settings" onclick="document.getElementById('editJudgeModal_{{ assignment.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
+                <form method="POST" action="{{ url_for('events.delete_judge', event_id=event.id, assignment_id=assignment.id) }}" style="display:inline;">
+                    <button type="submit" class="btn-icon-raw text-danger" title="Remove Judge" onclick="return confirm('Unassign this judge?')"><i class="fa-solid fa-trash"></i></button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state text-center py-4">No judges assigned to this event yet.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- JUDGES MODALS -->
+{% for assignment in event.assigned_judges %}
+<div id="editJudgeModal_{{ assignment.id }}" class="admin-modal">
+    <div class="glass-panel" style="width: 400px; padding: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0;">Judge Settings</h4>
+            <button type="button" class="btn-icon-raw" onclick="this.closest('.admin-modal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p class="text-sm text-muted">Updating: <strong>{{ assignment.judge.name or assignment.judge.username }}</strong></p>
+        <form method="POST" action="{{ url_for('events.edit_judge', event_id=event.id, assignment_id=assignment.id) }}">
+            <div class="border rounded p-3 bg-light mb-4">
+                <div class="form-check-custom" style="transform: scale(1.1); transform-origin: left;">
+                    <input type="checkbox" name="is_chairman" id="is_chairman_edit_{{ assignment.id }}" {% if assignment.is_chairman %}checked{% endif %} {% if has_chairman and not assignment.is_chairman %}disabled title="A Chairman already exists"{% endif %}>
+                    <label for="is_chairman_edit_{{ assignment.id }}" class="text-dark" {% if has_chairman and not assignment.is_chairman %}style="opacity: 0.5;"{% endif %}><strong>Chairman Judge?</strong></label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Save Settings</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+<div id="judgeModal" class="admin-modal">
+    <div class="glass-panel" style="width: 400px; padding: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0;">Create New Account</h4>
+            <button type="button" class="btn-icon-raw" onclick="this.closest('.admin-modal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form method="POST" action="{{ url_for('events.quick_create_judge', event_id=event.id) }}">
+            <div class="mb-3"><label class="form-label">Full Name</label><input type="text" name="name" class="form-control" required></div>
+            <div class="mb-3"><label class="form-label">Username</label><input type="text" name="username" class="form-control" required></div>
+            <div class="mb-4"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div>
+            <input type="hidden" name="role" value="judge">
+            <button type="submit" class="btn btn-primary w-100">Create Account</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const addJudgeForm = document.getElementById('addJudgeForm');
+        if (addJudgeForm) {
+            const assignedJudges = {{ event.assigned_judges | map(attribute='judge_id') | list | tojson }};
+            const hasChairman = {{ (event.assigned_judges | selectattr('is_chairman', 'equalto', True) | list | length > 0) | tojson }};
+            
+            addJudgeForm.addEventListener('submit', function(e) {
+                const select = this.querySelector('select[name="judge_id"]');
+                const judgeId = parseInt(select.value);
+                const isChairmanCheck = this.querySelector('#is_chairman');
+                const isChairman = isChairmanCheck ? isChairmanCheck.checked : false;
+                
+                if (assignedJudges.includes(judgeId)) {
+                    e.preventDefault();
+                    select.style.borderColor = '#ef4444';
+                    select.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+                    if(typeof showToast === 'function') showToast('error', 'This judge is already assigned to the event.');
+                    setTimeout(() => { select.style.borderColor = '#cbd5e1'; select.style.boxShadow = ''; }, 3000);
+                } else if (hasChairman && isChairman) {
+                    e.preventDefault();
+                    if(typeof showToast === 'function') showToast('error', 'A Chairman is already assigned. Only 1 chairman is allowed per event.');
+                }
+            });
+        }
+    });
+</script>

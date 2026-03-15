@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}All Events{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up">
+    <header class="page-header mb-4">
+        <div>
+            <h2><i class="fa-solid fa-calendar-days text-primary me-2"></i> Manage Events</h2>
+            <p class="text-muted m-0">View, manage, and configure all events in the system.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
+            <a href="{{ url_for('events.create') }}" class="btn btn-primary glass-effect"><i class="fa-solid fa-plus me-1"></i> New Event</a>
+        </div>
+    </header>
+
+    <div class="glass-panel" style="padding: 0; overflow: hidden; border-radius: 12px;">
+        <table class="table mb-0" style="width: 100%; border-collapse: collapse;">
+            <thead style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.05);">
+                <tr>
+                    <th style="padding: 15px 20px; text-align: left; color: var(--text-muted); font-weight: 600;">Event Name</th>
+                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Type</th>
+                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Status</th>
+                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Contestants</th>
+                    <th style="padding: 15px 20px; text-align: right; color: var(--text-muted); font-weight: 600;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr style="border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;">
+                    <td style="padding: 15px 20px;">
+                        <strong style="color: var(--text-bright); font-size: 1.05rem;">{{ event.name }}</strong>
+                        <div class="text-muted" style="font-size: 0.8rem; margin-top: 4px;">Created: {{ event.last_active.strftime('%B %d, %Y') if event.last_active else 'N/A' }}</div>
+                    </td>
+                    <td style="padding: 15px 20px; text-align: center;">
+                        <span class="badge bg-secondary text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">{% if event.event_type == 'PAGEANT' %}Score-Based{% else %}Point-Based{% endif %}</span>
+                    </td>
+                    <td style="padding: 15px 20px; text-align: center;">
+                        {% if event.status == 'Ongoing' %}
+                            <span class="badge bg-success text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;"><i class="fa-solid fa-play me-1"></i> Ongoing</span>
+                        {% else %}
+                            <span class="badge bg-warning text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;"><i class="fa-solid fa-pause me-1"></i> Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 500;">
+                        {{ event.contestants|length }}
+                    </td>
+                    <td style="padding: 15px 20px; text-align: right;">
+                        <a href="{{ url_for('events.manage', event_id=event.id) }}" class="btn btn-sm btn-outline-primary glass-effect"><i class="fa-solid fa-gear me-1"></i> Manage</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-calendar-xmark fa-2x mb-2" style="opacity: 0.3;"></i>
+                        <p class="m-0">No events found in the system.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
+</style>
+{% endblock %}

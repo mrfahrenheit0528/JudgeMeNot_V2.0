@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- SEO Best Practices -->
     <title>{% block title %}Home{% endblock %} - JudgeMeNot</title>
     <meta name="description" content="JudgeMeNot 2.0 - A modern, comprehensive event scoring and tabulation system designed for pageants and quiz bees.">
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Core CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {% block extra_head %}{% endblock %}
@@ -27,12 +24,12 @@
             </div>
             
             {% if session.get('user') %}
+            {% set current_ep = request.endpoint | default('') %}
             <nav class="main-nav">
                 <ul>
-                    <li><a href="{{ url_for('index') }}" class="nav-link active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
-                    <li><a href="#" class="nav-link"><i class="fa-solid fa-users"></i> Participants</a></li>
-                    <li><a href="#" class="nav-link"><i class="fa-solid fa-star"></i> Scoring</a></li>
-                    <li><a href="#" class="nav-link"><i class="fa-solid fa-chart-pie"></i> Results</a></li>
+                    <li><a href="{{ url_for('index') }}" class="nav-link {% if not current_ep.startswith('leaderboard') and current_ep != 'about' %}active{% endif %}"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+                    <li><a href="{{ url_for('leaderboard.index') }}" class="nav-link {% if current_ep.startswith('leaderboard') %}active{% endif %}"><i class="fa-solid fa-trophy"></i> Leaderboards</a></li>
+                    <li><a href="#" class="nav-link {% if current_ep == 'about' %}active{% endif %}"><i class="fa-solid fa-circle-info"></i> About</a></li>
                 </ul>
             </nav>
             
@@ -44,7 +41,7 @@
                 <div class="avatar">
                     <i class="fa-solid fa-user-tie"></i>
                 </div>
-                <a href="{{ url_for('auth.logout') }}" class="btn-icon" aria-label="Logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+                <button onclick="document.getElementById('logoutConfirmModal').style.display='flex'" class="btn-icon" aria-label="Logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
             {% endif %}
         </header>
@@ -54,11 +51,6 @@
             {% block content %}
             {% endblock %}
         </main>
-        
-        <!-- Uniform Footer -->
-        <footer class="main-footer">
-            <p>&copy; 2026 JudgeMeNot Tabulation System. All rights reserved.</p>
-        </footer>
     </div>
     
     <!-- Toast Notifications Container -->
@@ -67,7 +59,7 @@
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="toast glass-panel fade-in-up shadow" style="padding: 15px 20px; border-left: 5px solid {% if category == 'error' %}#ef4444{% else %}#10b981{% endif %}; background: rgba(255, 255, 255, 0.9);">
-                        <div class="d-flex align-items-center gap-2">
+                        <div style="display: flex; align-items: center; gap: 8px;">
                             {% if category == 'error' %}
                                 <i class="fa-solid fa-circle-exclamation text-danger"></i>
                             {% else %}
@@ -84,16 +76,12 @@
     
     <!-- Scripts -->
     <script>
-        // Micro-animations script for page load
         document.addEventListener('DOMContentLoaded', () => {
             const elements = document.querySelectorAll('.fade-in-up');
             elements.forEach((el, index) => {
-                setTimeout(() => {
-                    el.classList.add('visible');
-                }, index * 100);
+                setTimeout(() => { el.classList.add('visible'); }, index * 100);
             });
             
-            // Auto dismiss toasts after 4 seconds
             const toasts = document.querySelectorAll('#toast-container .toast');
             toasts.forEach((toast) => {
                 setTimeout(() => {
@@ -106,19 +94,34 @@
         });
     </script>
     
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(4, 11, 22, 0.7); backdrop-filter: blur(8px); z-index:9999; justify-content:center; align-items:center;">
+        <div class="glass-panel p-4" style="min-width: 350px; max-width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="margin:0; color: var(--text-bright);"><i class="fa-solid fa-right-from-bracket text-primary me-2"></i>Sign Out</h4>
+                <button type="button" onclick="document.getElementById('logoutConfirmModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="color: var(--text-primary);">Are you sure you want to log out of your account?</p>
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary glass-effect" onclick="document.getElementById('logoutConfirmModal').style.display='none'">Cancel</button>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-primary glass-effect">Sign Out</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Global Deactivate Confirmation Modal -->
     <div id="deactivateConfirmModal" class="modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(4, 11, 22, 0.7); backdrop-filter: blur(8px); z-index:9999; justify-content:center; align-items:center;">
         <div class="glass-panel p-4" style="min-width: 400px; max-width: 90%;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h4 class="text-danger" style="margin:0;"><i class="fa-solid fa-triangle-exclamation me-2"></i>Confirm Action</h4>
-                <button type="button" onclick="closeDeactivateModal()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">&times;</button>
+                <button type="button" onclick="closeDeactivateModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-white" id="deactivateModalMessage">Are you sure you want to pause/deactivate this item? Type <strong>CONFIRM</strong> to proceed.</p>
+            <p style="color: var(--text-primary);" id="deactivateModalMessage">Are you sure you want to pause/deactivate this item? Type <strong>CONFIRM</strong> to proceed.</p>
             <div class="form-group mt-3">
                 <input type="text" id="deactivateConfirmInput" class="form-control glass-input" autocomplete="off" placeholder="Type CONFIRM here">
                 <small id="deactivateConfirmError" class="text-danger" style="display:none; margin-top:5px; font-weight:500;"><i class="fa-solid fa-circle-exclamation"></i> You must type CONFIRM exactly to proceed.</small>
             </div>
-            <div class="d-flex justify-content-end gap-2 mt-4">
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
                 <button type="button" class="btn btn-secondary glass-effect" onclick="closeDeactivateModal()">Cancel</button>
                 <button type="button" class="btn btn-danger glass-effect" onclick="processDeactivate()">Submit</button>
             </div>
@@ -129,7 +132,7 @@
         let currentDeactivateForm = null;
 
         function promptDeactivate(event, formElement, message) {
-            event.preventDefault(); // Stop default form submission
+            event.preventDefault(); 
             currentDeactivateForm = formElement;
             if(message) {
                 document.getElementById('deactivateModalMessage').innerHTML = message + " Type <strong>CONFIRM</strong> to proceed.";
@@ -150,19 +153,14 @@
         function processDeactivate() {
             const input = document.getElementById('deactivateConfirmInput').value;
             if(input === 'CONFIRM') {
-                if(currentDeactivateForm) {
-                    currentDeactivateForm.submit(); // Programmatically submit the stored form
-                }
+                if(currentDeactivateForm) currentDeactivateForm.submit(); 
             } else {
                 document.getElementById('deactivateConfirmError').style.display = 'block';
             }
         }
         
-        // Allow Enter key to submit inside the modal
         document.getElementById('deactivateConfirmInput')?.addEventListener('keypress', function(e) {
-            if(e.key === 'Enter') {
-                processDeactivate();
-            }
+            if(e.key === 'Enter') processDeactivate();
         });
     </script>
     

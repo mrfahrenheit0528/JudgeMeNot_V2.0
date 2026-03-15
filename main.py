@@ -29,37 +29,45 @@ def create_app(test_config=None):
     from webapp.python.auth import auth_bp, require_role
     from webapp.python.events import events_bp
     from webapp.python.admin import admin_bp
+    from webapp.python.judge import judge_bp  
+    from webapp.python.leaderboard import leaderboard_bp  # <-- Imported new blueprint
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(events_bp)
     app.register_blueprint(admin_bp)
-
-    @app.route('/leaderboard')
-    def leaderboard():
-        return render_template('leaderboard.html')
+    app.register_blueprint(judge_bp)          
+    app.register_blueprint(leaderboard_bp)                # <-- Registered new blueprint
 
     @app.route('/')
     @require_role()
     def index():
         user = session.get('user')
-        if user['role'] == 'judge':
-            return "Judge Dashboard Placeholder"
-        elif user['role'] == 'tabulator':
-            return "Tabulator Dashboard Placeholder"
-            
-        # Admin / Admin-Viewer scope
         from webapp.python.database import SessionLocal
-        from webapp.python.models import Event, Contestant
+        from webapp.python.models import Event, Contestant, EventJudge
+        
         db = SessionLocal()
         try:
-            events = db.query(Event).all()
-            # Active events calculation strictly based on Event status
-            active_events_count = sum(1 for e in events if e.status == 'Ongoing')
+            if user['role'] == 'judge':
+                # Fetch events assigned to this specific judge
+                assignments = db.query(EventJudge).filter(EventJudge.judge_id == user['id']).all()
+                assigned_event_ids = [a.event_id for a in assignments]
+                events = db.query(Event).filter(Event.id.in_(assigned_event_ids)).all()
+                
+                return render_template('judge_dashboard.html', title="Judge Dashboard", events=events)
+                
+            elif user['role'] == 'tabulator':
+                return "Tabulator Dashboard Placeholder"
+                
+            # Admin / Admin-Viewer scope
+            active_events_count = db.query(Event).filter(Event.status == 'Ongoing').count()
             total_participants = db.query(Contestant).count()
+            
+            # Fetch only the 3 most recently active/launched events
+            recent_events = db.query(Event).order_by(Event.last_active.desc()).limit(3).all()
             
             return render_template('index.html', 
                                    title="Dashboard", 
-                                   events=events,
+                                   events=recent_events,
                                    active_events_count=active_events_count,
                                    total_participants=total_participants)
         finally:

@@ -1,0 +1,285 @@
+<!-- Segments Management Area -->
+<div class="glass-panel fade-in-up">
+    <div class="panel-header">
+        <h3><i class="fa-solid fa-layer-group text-accent me-2"></i> Segments</h3>
+    </div>
+    
+    <!-- Quick Add Form -->
+    <form method="POST" action="{{ url_for('events.add_segment', event_id=event.id) }}" class="quick-add-form" id="addSegmentForm" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 12px; width: 100%;">
+        <input type="number" step="1" min="1" max="100" name="percentage_weight" id="segWeightInput" class="form-control form-control-sm text-center" placeholder="% Wt" style="width: 70px; flex-shrink: 0;" required>
+        <input type="text" name="name" class="form-control form-control-sm" placeholder="New segment name (e.g. Swimwear)" style="flex: 1; min-width: 0;" required>
+        
+        <div class="form-check-custom" style="flex: 0 0 auto; white-space: nowrap; display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" name="is_final" id="is_final" onchange="toggleWeightInput(this)" {% if has_final_segment %}disabled title="Only 1 final round allowed"{% endif %}>
+            <label for="is_final" style="font-size: 0.85rem;" class="{% if has_final_segment %}text-muted opacity-50{% endif %}">Final?</label>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-sm glass-effect" style="flex: 0 0 auto;"><i class="fa-solid fa-plus me-1"></i> Add</button>
+    </form>
+    
+    <!-- Segments List -->
+    <div class="segment-list mt-4">
+        {% for segment in event.segments|sort(attribute='order_index') %}
+        <div class="admin-card mb-3 {% if segment.is_active %}active{% endif %}">
+            <div class="admin-card-header">
+                <div class="admin-card-title">
+                    <strong>{{ segment.order_index }}. {{ segment.name }}</strong>
+                    <div class="badges mt-1">
+                        {% if segment.is_final %}
+                            <span class="badge bg-danger text-white">Final Round</span>
+                        {% elif segment.percentage_weight %}
+                            {% set w = segment.percentage_weight|float %}
+                            {% set d_weight = (w * 100) if w <= 1.0 and w > 0 else w %}
+                            <span class="badge bg-primary text-white">{{ d_weight|round|int }}% Weight</span>
+                        {% endif %}
+                        {% if segment.is_active %}<span class="badge bg-success text-white ms-1">Active</span>{% endif %}
+                        
+                        <!-- LIVE PROGRESS BADGES -->
+                        {% set prog = segment_progress[segment.id] %}
+                        {% if prog.total > 0 %}
+                            {% if prog.submitted >= prog.total %}
+                                <span id="prog_badge_{{ segment.id }}" class="badge bg-success text-white" style="margin-left: 5px;"><i class="fa-solid fa-check-double"></i> All Judges Done</span>
+                            {% else %}
+                                <span id="prog_badge_{{ segment.id }}" class="badge bg-info text-white" style="margin-left: 5px;">{{ prog.submitted }} / {{ prog.total }} Judges Done</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-secondary text-white" style="margin-left: 5px;">No Judges Assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="admin-card-actions">
+                    <form method="POST" action="{{ url_for('events.toggle_segment', event_id=event.id, segment_id=segment.id) }}" style="display:inline;">
+                        {% if segment.is_active %}
+                            <!-- Changed type="submit" to type="button" to prevent native form reload -->
+                            <button type="button" class="btn-icon text-warning" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'deactivate')" title="Deactivate Segment"><i class="fa-solid fa-pause"></i></button>
+                        {% else %}
+                            <!-- Changed type="submit" to type="button" to prevent native form reload -->
+                            <button type="button" class="btn-icon text-success" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'activate')" title="Activate Segment"><i class="fa-solid fa-play"></i></button>
+                        {% endif %}
+                    </form>
+                    <button type="button" class="btn-icon text-secondary" onclick="document.getElementById('editSegmentModal_{{ segment.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="btn-icon text-primary" onclick="document.getElementById('addCriteriaModal_{{ segment.id }}').style.display='flex'"><i class="fa-solid fa-list-check"></i></button>
+                    <form method="POST" action="{{ url_for('events.delete_segment', event_id=event.id, segment_id=segment.id) }}" style="display:inline;">
+                        <!-- Changed type="submit" to type="button" for delete security -->
+                        <button type="button" class="btn-icon text-danger" onclick="promptDeactivate(event, this.form, 'Are you sure you want to permanently DELETE this segment?')" title="Delete Segment"><i class="fa-solid fa-trash"></i></button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="criteria-list">
+                {% for c in segment.criteria %}
+                <div class="criteria-item">
+                    <div class="crit-info">
+                        <i class="fa-solid fa-caret-right text-primary me-2"></i> 
+                        <strong>{{ c.name }}</strong> 
+                        {% set cw = c.weight|float %}
+                        {% set c_weight = (cw * 100) if cw <= 1.0 and cw > 0 else cw %}
+                        <span class="crit-meta">(Weight: {{ c_weight|round|int }}%, Max: {{ c.max_score }})</span>
+                    </div>
+                    <div class="item-actions">
+                        <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editCriteriaModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen" style="font-size: 0.8rem;"></i></button>
+                        <form method="POST" action="{{ url_for('events.delete_criteria', event_id=event.id, criteria_id=c.id) }}" style="display:inline;">
+                            <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove this criteria?')"><i class="fa-solid fa-xmark"></i></button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="criteria-item empty">
+                    <em><i class="fa-solid fa-info-circle me-1"></i> No criteria added yet.</em>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state text-center py-4">
+            <i class="fa-solid fa-layer-group fa-2x text-muted mb-2" style="opacity: 0.3;"></i>
+            <p class="text-muted m-0">No segments created yet.<br><small>Segments are rounds like 'Swimwear' or 'Talent'.</small></p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- SEGMENTS MODALS -->
+{% for segment in event.segments %}
+<div id="editSegmentModal_{{ segment.id }}" class="admin-modal">
+    <div class="glass-panel" style="width: 400px; padding: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0;">Edit Segment</h4>
+            <button type="button" class="btn-icon-raw" onclick="this.closest('.admin-modal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        {% set w = segment.percentage_weight|float %}
+        {% set s_weight = (w * 100)|round|int if w <= 1.0 and w > 0 else w|int %}
+        <form method="POST" action="{{ url_for('events.edit_segment', event_id=event.id, segment_id=segment.id) }}" class="edit-segment-form" data-original-weight="{{ s_weight }}">
+            <div class="mb-3"><label class="form-label">Name</label><input type="text" name="name" class="form-control" value="{{ segment.name }}" required></div>
+            <div class="row g-2 mb-4">
+                <div class="col-8"><label class="form-label">% Weight</label><input type="number" name="percentage_weight" class="form-control" value="{{ s_weight }}" {% if segment.is_final %}disabled{% endif %}></div>
+                <div class="col-4 d-flex align-items-end"><div class="form-check-custom"><input type="checkbox" name="is_final" id="is_final_edit_{{ segment.id }}" onchange="toggleWeightInput(this)" {% if segment.is_final %}checked{% endif %} {% if has_final_segment and not segment.is_final %}disabled{% endif %}><label for="is_final_edit_{{ segment.id }}">Final?</label></div></div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<div id="addCriteriaModal_{{ segment.id }}" class="admin-modal">
+    <div class="glass-panel" style="width: 400px; padding: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0;">Add Criteria</h4>
+            <button type="button" class="btn-icon-raw" onclick="this.closest('.admin-modal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        {% set ns_crit = namespace(total=0) %}
+        {% for crit in segment.criteria %}{% set cw = crit.weight|float %}{% set ns_crit.total = ns_crit.total + (cw * 100 if cw <= 1.0 and cw > 0 else cw) %}{% endfor %}
+        <form method="POST" action="{{ url_for('events.add_criteria', event_id=event.id, segment_id=segment.id) }}" class="add-criteria-form" data-current-weight="{{ ns_crit.total | round | int }}">
+            <div class="mb-3"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required></div>
+            <div class="row g-2 mb-4">
+                <div class="col-6"><label class="form-label">Weight (%)</label><input type="number" name="weight" class="form-control" required></div>
+                <div class="col-6"><label class="form-label">Max Score</label><input type="number" name="max_score" class="form-control" value="10" required></div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Save Criteria</button>
+        </form>
+    </div>
+</div>
+
+{% for c in segment.criteria %}
+<div id="editCriteriaModal_{{ c.id }}" class="admin-modal">
+    <div class="glass-panel" style="width: 400px; padding: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0;">Edit Criteria</h4>
+            <button type="button" class="btn-icon-raw" onclick="this.closest('.admin-modal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        {% set cw = c.weight|float %}{% set ed_weight = (cw * 100)|round|int if cw <= 1.0 and cw > 0 else cw|int %}
+        <form method="POST" action="{{ url_for('events.edit_criteria', event_id=event.id, criteria_id=c.id) }}" class="edit-criteria-form" data-current-weight="{{ ns_crit.total | round | int }}" data-original-weight="{{ ed_weight }}">
+            <div class="mb-3"><label class="form-label">Name</label><input type="text" name="name" class="form-control" value="{{ c.name }}" required></div>
+            <div class="row g-2 mb-4">
+                <div class="col-6"><label class="form-label">Weight (%)</label><input type="number" name="weight" class="form-control" value="{{ ed_weight }}" required></div>
+                <div class="col-6"><label class="form-label">Max Score</label><input type="number" name="max_score" class="form-control" value="{{ c.max_score }}" required></div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endfor %}
+
+<script>
+    if (typeof window.toggleWeightInput !== 'function') {
+        window.toggleWeightInput = function(checkbox) {
+            const form = checkbox.closest('form');
+            const weightInput = form.querySelector('input[name="percentage_weight"]');
+            if (checkbox.checked) { weightInput.value = ''; weightInput.disabled = true; } else { weightInput.disabled = false; }
+        };
+    }
+
+    // --- NEW: SMART REAL-TIME TOGGLE MODAL ---
+    // Moved globally outside DOMContentLoaded so it is unconditionally available upon click
+    window.promptSegmentToggle = function(e, formElement, eventId, segmentId, action) {
+        if (e) e.preventDefault(); // Stop immediate submission
+        
+        // Instantly Fetch the absolute latest status from the API when button is clicked
+        // Append a timestamp parameter to prevent aggressive browser caching
+        fetch(`/events/api/${eventId}/status?_=` + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                const prog = data.progress[segmentId];
+                let msg = "";
+                
+                if (action === 'deactivate') {
+                    if (prog && prog.total > 0 && prog.submitted < prog.total) {
+                        msg = `WARNING: Only ${prog.submitted} out of ${prog.total} assigned judges have locked their scores. Deactivating will prevent them from finishing.`;
+                    } else {
+                        msg = "All judges have submitted. Are you sure you want to deactivate this segment?";
+                    }
+                } else if (action === 'activate') {
+                    const activeSegId = data.active_segment_id;
+                    if (activeSegId) {
+                        const activeProg = data.progress[activeSegId];
+                        if (activeProg && activeProg.total > 0 && activeProg.submitted < activeProg.total) {
+                            msg = `WARNING: Activating this will pause the currently active segment, but only ${activeProg.submitted} out of ${activeProg.total} judges have finished it!`;
+                        } else {
+                            msg = "Activating this will automatically pause the currently active segment.";
+                        }
+                    } else {
+                        msg = "Are you sure you want to activate this segment?";
+                    }
+                }
+                
+                // Pass to the global modal logic with a dummy event object
+                promptDeactivate({ preventDefault: () => {} }, formElement, msg);
+            })
+            .catch(err => {
+                console.error(err);
+                // Fallback if API fails
+                promptDeactivate({ preventDefault: () => {} }, formElement, "Are you sure you want to change this segment's status?");
+            });
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // --- REAL-TIME ADMIN POLLING (Updates the background Badges) ---
+        setInterval(() => {
+            // Append a timestamp parameter to prevent aggressive browser caching
+            fetch(`{{ url_for('events.api_event_status', event_id=event.id) }}?_=` + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                if(data.progress) {
+                    for (const [segId, prog] of Object.entries(data.progress)) {
+                        const badge = document.getElementById('prog_badge_' + segId);
+                        if (badge && prog.total > 0) {
+                            if (prog.submitted >= prog.total) {
+                                badge.className = 'badge bg-success text-white';
+                                badge.innerHTML = '<i class="fa-solid fa-check-double"></i> All Judges Done';
+                            } else {
+                                badge.className = 'badge bg-info text-white';
+                                badge.textContent = `${prog.submitted} / ${prog.total} Judges Done`;
+                            }
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error("Polling error:", err));
+        }, 3000); 
+
+        // (Keep the existing Add/Edit Segment Javascript validations below this)
+        {% set ns_js = namespace(total=0) %}
+        {% for seg in event.segments if not seg.is_final %}
+            {% set w = seg.percentage_weight|float %}
+            {% set ns_js.total = ns_js.total + (w * 100 if w <= 1.0 and w > 0 else w) %}
+        {% endfor %}
+        const currentTotalWeight = {{ ns_js.total | round | int }};
+
+        function applyErrorGlow(input) {
+            input.style.borderColor = '#ef4444';
+            input.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+            setTimeout(() => { input.style.borderColor = '#cbd5e1'; input.style.boxShadow = ''; }, 3000);
+        }
+
+        function validateSegmentWeight(e, form, isEdit) {
+            const finalCheck = form.querySelector('input[name="is_final"]');
+            if (finalCheck && finalCheck.checked) return;
+            const weightInput = form.querySelector('input[name="percentage_weight"]');
+            const addedWeight = parseInt(weightInput.value || 0);
+            const originalWeight = isEdit ? parseInt(form.dataset.originalWeight || 0) : 0;
+            if ((currentTotalWeight - originalWeight + addedWeight) > 100) {
+                e.preventDefault(); applyErrorGlow(weightInput);
+                if(typeof showToast === 'function') showToast('error', `Submission blocked! Event total weight cannot exceed 100%.`);
+            }
+        }
+        document.getElementById('addSegmentForm')?.addEventListener('submit', function(e) { validateSegmentWeight(e, this, false); });
+        document.querySelectorAll('.edit-segment-form').forEach(f => f.addEventListener('submit', function(e) { validateSegmentWeight(e, this, true); }));
+
+        function validateCriteriaWeight(e, form, isEdit) {
+            const weightInput = form.querySelector('input[name="weight"]');
+            const addedWeight = parseInt(weightInput.value || 0);
+            const currentTotal = parseInt(form.dataset.currentWeight || 0);
+            const originalWeight = isEdit ? parseInt(form.dataset.originalWeight || 0) : 0;
+            if ((currentTotal - originalWeight + addedWeight) > 100) {
+                e.preventDefault(); applyErrorGlow(weightInput);
+                if(typeof showToast === 'function') showToast('error', `Submission blocked! Total criteria weight cannot exceed 100%.`);
+            }
+        }
+        
+        // FIXED: The missing parenthesis was specifically right here!
+        document.querySelectorAll('.add-criteria-form').forEach(f => f.addEventListener('submit', function(e) { validateCriteriaWeight(e, this, false); }));
+        document.querySelectorAll('.edit-criteria-form').forEach(f => f.addEventListener('submit', function(e) { validateCriteriaWeight(e, this, true); }));
+    });
+</script>

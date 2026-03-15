@@ -26,8 +26,9 @@
                 <label for="event_type" class="form-label">Event Type</label>
                 <select class="form-control" id="event_type" name="event_type" required onchange="toggleCategoryInput()">
                     <option value="" disabled selected>Select an event type...</option>
-                    <option value="PAGEANT">Score-Based (Pageant, Talent, Presentation)</option>
-                    <option value="QUIZBEE">Point-Based (Quiz Bee, Trivia, Hackathon)</option>
+                    <!-- DB Values Updated to clean strings -->
+                    <option value="Score-Based">Score-Based (Pageant, Talent, Presentation)</option>
+                    <option value="Point-Based">Point-Based (Quiz Bee, Trivia, Hackathon)</option>
                 </select>
                 <small class="text-muted mt-1 d-block">Score-based events use segments and criteria. Point-based use rounds and correct/wrong tallying.</small>
             </div>
@@ -51,7 +52,8 @@
 function toggleCategoryInput() {
     const typeSelect = document.getElementById("event_type");
     const catContainer = document.getElementById("category_container");
-    if (typeSelect.value === "PAGEANT") {
+    // Updated JS Check
+    if (typeSelect.value === "Score-Based") {
         catContainer.style.display = "block";
     } else {
         catContainer.style.display = "none";

@@ -44,6 +44,8 @@ class Event(Base):
     show_public_rankings = Column(Boolean, default=False)
     category_count = Column(Integer, default=1)
     
+    last_active = Column(DateTime, default=datetime.datetime.now)
+    
     segments = relationship("Segment", back_populates="event", cascade="all, delete-orphan")
     contestants = relationship("Contestant", back_populates="event", cascade="all, delete-orphan")
     assigned_judges = relationship("EventJudge", back_populates="event", cascade="all, delete-orphan")

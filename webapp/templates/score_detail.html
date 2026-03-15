@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.name }} - Score Matrices{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up">
+    <header class="page-header mb-4">
+        <div>
+            <h2>{{ event.name }} <span class="text-muted" style="font-weight: 400; font-size: 1.4rem;">| Comprehensive Scores</span></h2>
+            <p class="text-muted m-0">Detailed breakdown of scores per segment and judge.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('scores.index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
+            <a href="{{ url_for('scores.export', event_id=event.id, target='overall') }}" class="btn btn-success glass-effect"><i class="fa-solid fa-file-export me-1"></i> Export Overall</a>
+        </div>
+    </header>
+
+    <!-- OVERALL EVENT RESULTS -->
+    <div class="glass-panel mb-5">
+        <h4 class="mb-3"><i class="fa-solid fa-trophy text-warning me-2"></i> Overall Tabulation</h4>
+        <div class="table-responsive">
+            <table class="table mb-0" style="width: 100%; border-collapse: collapse;">
+                <thead style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.06);">
+                    <tr>
+                        <th style="padding: 12px 15px; text-align: left; width: 60px;">Rank</th>
+                        <th style="padding: 12px 15px; text-align: left; width: 60px;">No.</th>
+                        <th style="padding: 12px 15px; text-align: left;">Candidate Name</th>
+                        <th style="padding: 12px 15px; text-align: right; color: var(--primary); font-weight: 700;">Final Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in overall_leaderboard %}
+                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.03);">
+                        <td style="padding: 12px 15px; font-weight: bold;">{{ row.rank }}</td>
+                        <td style="padding: 12px 15px; font-family: monospace;">#{{ row.contestant.candidate_number }}</td>
+                        <td style="padding: 12px 15px;">{{ row.contestant.name }}</td>
+                        <td style="padding: 12px 15px; text-align: right; font-weight: bold;">
+                            {% if event.event_type == 'Score-Based' %}{{ "%.2f"|format(row.score) }}{% else %}{{ row.score }}{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- INDIVIDUAL SEGMENT MATRICES -->
+    <h3 class="mb-3 text-muted" style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">Segment Breakdowns</h3>
+    
+    {% for seg in event.segments|sort(attribute='order_index') %}
+    <div class="glass-panel mb-4" style="border-left: 4px solid var(--accent);">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0">{{ seg.order_index }}. {{ seg.name }} 
+                {% if seg.percentage_weight %}<span class="text-muted text-sm fw-normal">({{ (seg.percentage_weight * 100)|int }}% Weight)</span>{% endif %}
+            </h4>
+            <a href="{{ url_for('scores.export', event_id=event.id, target='segment_' ~ seg.id) }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-download me-1"></i> Export Segment</a>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table mb-0" style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                <thead style="background: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(0,0,0,0.05);">
+                    <tr>
+                        <th style="padding: 10px 15px; text-align: left;">Contestant</th>
+                        {% for judge in event.assigned_judges %}
+                        <th style="padding: 10px 15px; text-align: center;">
+                            {{ judge.judge.name or judge.judge.username }}
+                            {% if judge.is_chairman %}<i class="fa-solid fa-star text-warning" title="Chairman"></i>{% endif %}
+                        </th>
+                        {% endfor %}
+                        <th style="padding: 10px 15px; text-align: center; font-weight: 700;">Raw Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in event.contestants|sort(attribute='candidate_number') %}
+                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.02);">
+                        <td style="padding: 10px 15px; border-right: 1px solid rgba(0,0,0,0.05);">
+                            <span class="text-muted font-monospace me-1">#{{ c.candidate_number }}</span> {{ c.name }}
+                        </td>
+                        
+                        {% set ns = namespace(row_total=0, has_scores=false) %}
+                        {% for judge in event.assigned_judges %}
+                            {% set j_score = matrix[seg.id][c.id][judge.judge_id] %}
+                            <td style="padding: 10px 15px; text-align: center;">
+                                {% if j_score != '-' %}
+                                    {{ j_score }}
+                                    {% set ns.row_total = ns.row_total + j_score %}
+                                    {% set ns.has_scores = true %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                        
+                        <td style="padding: 10px 15px; text-align: center; font-weight: bold; background: rgba(59, 130, 246, 0.03);">
+                            {% if ns.has_scores %}{{ ns.row_total }}{% else %}-{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

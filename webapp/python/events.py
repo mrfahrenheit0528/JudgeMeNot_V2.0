@@ -1,8 +1,10 @@
 import os
+from datetime import datetime
 from werkzeug.utils import secure_filename
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify
 from webapp.python.database import SessionLocal
-from webapp.python.models import Event, Segment, Criteria, Contestant, User, EventJudge
+# Added JudgeProgress to models import
+from webapp.python.models import Event, Segment, Criteria, Contestant, User, EventJudge, JudgeProgress
 from webapp.python.auth import require_role
 
 events_bp = Blueprint('events', __name__, url_prefix='/events')
@@ -20,7 +22,6 @@ def create():
         name = request.form.get('name')
         event_type = request.form.get('event_type')
         category_count = request.form.get('category_count', type=int, default=1)
-        # Note: Time and other fields can be added if we expand the model in the future
         
         if not name or not event_type:
             flash("Event name and type are required.", "error")
@@ -50,7 +51,8 @@ def manage(event_id):
             flash("Event not found.", "error")
             return redirect(url_for('index'))
             
-        if event.event_type == 'PAGEANT':
+        # FIX: Ensure it correctly checks for 'Score-Based' and strictly fetches judges
+        if event.event_type == 'Score-Based' or event.event_type == 'PAGEANT':
             eligible_judges = db.query(User).filter(User.role == 'judge').all()
         else:
             eligible_judges = db.query(User).filter(User.role == 'tabulator').all()
@@ -68,12 +70,27 @@ def manage(event_id):
             last_added = event.contestants[-1]
             if last_added.gender:
                 last_category = last_added.gender
+                
+        # --- ADDED: Check judge progress for all segments ---
+        segment_progress = {}
+        total_judges = len(event.assigned_judges) if event.assigned_judges else 0
+        
+        for seg in event.segments:
+            submitted_count = db.query(JudgeProgress).filter(
+                JudgeProgress.segment_id == seg.id, 
+                JudgeProgress.is_submitted == True
+            ).count()
+            segment_progress[seg.id] = {
+                'submitted': submitted_count,
+                'total': total_judges
+            }
 
         return render_template('event_manage.html', 
                                event=event, 
                                eligible_judges=eligible_judges,
                                next_numbers=next_numbers,
-                               last_category=last_category)
+                               last_category=last_category,
+                               segment_progress=segment_progress) # Passed to template
     finally:
         db.close()
 
@@ -84,6 +101,9 @@ def add_segment(event_id):
     is_final = request.form.get('is_final') == 'on'
     try:
         percentage_weight = float(request.form.get('percentage_weight') or 0.0)
+        # Convert whole number input (e.g. 50%) to decimal (0.5) for the database
+        if percentage_weight >= 1.0:
+            percentage_weight = percentage_weight / 100.0
     except ValueError:
         percentage_weight = 0.0
 
@@ -97,13 +117,7 @@ def add_segment(event_id):
             if percentage_weight <= 0:
                 flash("Percentage weight is required and must be > 0 for non-final segments.", "error")
                 return redirect(url_for('events.manage', event_id=event_id))
-                
-            current_total_weight = sum([s.percentage_weight for s in db.query(Segment).filter(Segment.event_id == event_id, Segment.is_final == False).all()])
-            if current_total_weight + percentage_weight > 100:
-                flash(f"Adding this segment exceeds 100% total weight (Current: {current_total_weight}%).", "error")
-                return redirect(url_for('events.manage', event_id=event_id))
             
-        # Optional order_index processing
         order = db.query(Segment).filter(Segment.event_id == event_id).count() + 1
         
         new_segment = Segment(event_id=event_id, 
@@ -171,7 +185,6 @@ def add_judge(event_id):
             flash("Please select a judge.", "error")
             return redirect(url_for('events.manage', event_id=event_id))
             
-        # Prevent duplicate assignment
         existing = db.query(EventJudge).filter(EventJudge.event_id == event_id, EventJudge.judge_id == judge_id).first()
         if existing:
             flash("Judge is already assigned to this event.", "error")
@@ -194,6 +207,8 @@ def edit_segment(event_id, segment_id):
     is_final = request.form.get('is_final') == 'on'
     try:
         percentage_weight = float(request.form.get('percentage_weight') or 0.0)
+        if percentage_weight >= 1.0:
+            percentage_weight = percentage_weight / 100.0
     except ValueError:
         percentage_weight = 0.0
 
@@ -229,6 +244,8 @@ def add_criteria(event_id, segment_id):
     try:
         weight = float(request.form.get('weight') or 1.0)
         max_score = int(request.form.get('max_score') or 10)
+        if weight >= 1.0:
+            weight = weight / 100.0
     except ValueError:
         weight = 1.0
         max_score = 10
@@ -248,6 +265,41 @@ def add_criteria(event_id, segment_id):
         db.add(new_crit)
         db.commit()
         flash(f"Criteria '{name}' added to {seg.name}.", "success")
+    finally:
+        db.close()
+    return redirect(url_for('events.manage', event_id=event_id))
+
+@events_bp.route('/<int:event_id>/edit_criteria/<int:criteria_id>', methods=['POST'])
+@require_role(['admin'])
+def edit_criteria(event_id, criteria_id):
+    name = request.form.get('name')
+    try:
+        weight = float(request.form.get('weight') or 0.0)
+        max_score = int(request.form.get('max_score') or 10)
+        if weight >= 1.0:
+            weight = weight / 100.0
+    except ValueError:
+        weight = 0.0
+        max_score = 10
+        
+    db = SessionLocal()
+    try:
+        crit = db.query(Criteria).filter(Criteria.id == criteria_id).first()
+        if not crit:
+            flash("Criteria not found.", "error")
+            return redirect(url_for('events.manage', event_id=event_id))
+            
+        if name:
+            crit.name = name
+        if weight > 0:
+            crit.weight = weight
+        if max_score > 0:
+            crit.max_score = max_score
+            
+        db.commit()
+        flash("Criteria updated successfully.", "success")
+    except Exception as e:
+        flash(f"Error updating criteria: {str(e)}", "error")
     finally:
         db.close()
     return redirect(url_for('events.manage', event_id=event_id))
@@ -290,17 +342,12 @@ def toggle_segment(event_id, segment_id):
             flash("Segment not found.", "error")
             return redirect(url_for('events.manage', event_id=event_id))
             
-        # Toggle logic: if activating, we might deactivate others if only one can be active?
-        # Typically yes, but we will strictly just toggle the current state.
-        
-        # CONSTRAINT: Cannot activate a segment if the event is NOT running
         if not seg.is_active and seg.event.status != "Ongoing":
             flash("You cannot activate a segment while the Event is deactivated.", "error")
             return redirect(url_for('events.manage', event_id=event_id))
             
         seg.is_active = not seg.is_active
         
-        # If we want to ensure only ONE active segment at a time:
         if seg.is_active:
             other_segs = db.query(Segment).filter(Segment.event_id == event_id, Segment.id != segment_id).all()
             for other in other_segs:
@@ -424,9 +471,9 @@ def quick_create_judge(event_id):
             hashed_pwd = hash_password(password)
             new_user = User(username=username, name=name, password_hash=hashed_pwd, role=role)
             db.add(new_user)
-            db.flush() # flush to get new_user.id
+            db.flush() 
             
-            # Now assign to the event automatically if role is judge
+            # UPDATED DB LOGIC CHECK
             if role == 'judge':
                 new_assignment = EventJudge(event_id=event_id, judge_id=new_user.id, is_chairman=False)
                 db.add(new_assignment)
@@ -458,12 +505,11 @@ def launch(event_id):
         else:
             event.is_locked = True
             event.status = "Ongoing"
+            event.last_active = datetime.now()
             
-            # Auto-activate the first segment if it exists and nothing is active
             if event.segments:
                 has_active = any(s.is_active for s in event.segments)
                 if not has_active:
-                    # Set the lowest order_index segment to active
                     first_seg = min(event.segments, key=lambda s: s.order_index or 999)
                     first_seg.is_active = True
                     
@@ -475,3 +521,35 @@ def launch(event_id):
     finally:
         db.close()
     return redirect(url_for('events.manage', event_id=event_id))
+
+@events_bp.route('/api/<int:event_id>/status')
+def api_event_status(event_id):
+    """Lightweight API endpoint for real-time frontend polling."""
+    db = SessionLocal()
+    try:
+        event = db.query(Event).filter(Event.id == event_id).first()
+        if not event:
+            return jsonify({'error': 'Not found'}), 404
+            
+        active_segment = next((s for s in event.segments if s.is_active), None)
+        total_judges = len(event.assigned_judges)
+        
+        progress = {}
+        for seg in event.segments:
+            submitted = db.query(JudgeProgress).filter(
+                JudgeProgress.segment_id == seg.id,
+                JudgeProgress.is_submitted == True
+            ).count()
+            progress[seg.id] = {
+                'submitted': submitted,
+                'total': total_judges,
+                'is_active': seg.is_active
+            }
+            
+        return jsonify({
+            'status': event.status,
+            'active_segment_id': active_segment.id if active_segment else None,
+            'progress': progress
+        })
+    finally:
+        db.close()
