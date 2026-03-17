@@ -6,8 +6,21 @@ import datetime
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+def get_local_ip():
+    """Fetches the local LAN IP address so devices on the same network can connect."""
+    import socket
+    try:
+        # Create a dummy socket to connect to an external IP to get the local IP used for routing
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception:
+        return "127.0.0.1"
+
 @admin_bp.route('/events')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer']) 
 def events():
     db = SessionLocal()
     try:
@@ -18,7 +31,7 @@ def events():
         db.close()
 
 @admin_bp.route('/users')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer']) 
 def users():
     db = SessionLocal()
     try:
@@ -111,7 +124,7 @@ def delete_user(user_id):
     return redirect(url_for('admin.users'))
 
 @admin_bp.route('/logs')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer'])
 def logs():
     db = SessionLocal()
     try:
@@ -122,6 +135,43 @@ def logs():
         db.close()
 
 @admin_bp.route('/settings')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer'])
 def settings():
-    return render_template('admin_settings.html')
+    import io
+    import base64
+    
+    try:
+        import qrcode
+        
+        # Determine the URL for the QR code
+        # If running locally (localhost), use the LAN IP so other devices can connect
+        if 'localhost' in request.host or '127.0.0.1' in request.host:
+            local_ip = get_local_ip()
+            url = f"http://{local_ip}:5000"
+        else:
+            # If running on cloud or accessed via IP, use the current host URL
+            url = request.url_root.rstrip('/')
+            
+        # Generate QR Code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(url)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to base64 for embedding directly in the HTML
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        
+    except ImportError:
+        img_str = None
+        url = "Dependencies missing: run 'pip install qrcode pillow'"
+        flash("Please install 'qrcode' and 'Pillow' packages to view the connection QR code.", "error")
+
+    return render_template('admin_settings.html', qr_code=img_str, url=url)

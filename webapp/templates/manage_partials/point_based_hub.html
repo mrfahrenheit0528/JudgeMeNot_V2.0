@@ -1,9 +1,10 @@
 <!-- Custom CSS-Proof Tab Navigation -->
 <div class="glass-panel mb-4 p-2 d-inline-flex align-items-center shadow-sm" style="border-radius: 12px; background: rgba(255,255,255,0.7); gap: 8px;">
-    <button type="button" id="btn-tab-mission" class="btn btn-primary fw-bold px-4" style="border-radius: 8px; border: none;" onclick="switchPbTab('mission')">
+    <!-- FIXED: Removed 'background: transparent;' inline styles so the classes work properly -->
+    <button type="button" id="btn-tab-mission" class="btn btn-primary fw-bold px-4 shadow-sm" style="border-radius: 8px;" onclick="switchPbTab('mission')">
         <i class="fa-solid fa-satellite-dish me-2"></i> Mission Control
     </button>
-    <button type="button" id="btn-tab-setup" class="btn btn-outline-secondary fw-bold px-4" style="border-radius: 8px; border: none; background: transparent; color: #64748b;" onclick="switchPbTab('setup')">
+    <button type="button" id="btn-tab-setup" class="btn text-muted fw-bold px-4" style="border-radius: 8px;" onclick="switchPbTab('setup')">
         <i class="fa-solid fa-sliders me-2"></i> Configuration & Setup
     </button>
 </div>
@@ -20,12 +21,11 @@
                 <h3 style="margin: 0; color: #1e293b;"><i class="fa-solid fa-satellite-dish text-danger me-2"></i> Broadcast Controls</h3>
             </div>
             
-            <!-- Global Active Segment Check -->
             {% set active_seg = event.segments | selectattr('is_active', 'equalto', True) | list | first %}
             
             <div id="mission-controls-list" style="display: flex; flex-direction: column; gap: 10px;">
                 {% for round in event.segments|sort(attribute='order_index') %}
-                <div class="shadow-sm" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s; {% if round.is_active %}background-color: var(--primary); color: white !important;{% else %}background-color: white; color: #1e293b;{% endif %}">
+                <div class="shadow-sm" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s; {% if round.is_active %}background-color: var(--primary-color); color: white !important;{% else %}background-color: white; color: #1e293b;{% endif %}">
                     
                     <div style="display: flex; flex-direction: column;">
                         <h6 style="margin: 0; font-weight: 700; font-size: 1.1rem; {% if round.is_active %}color: white !important;{% else %}color: #0f172a;{% endif %}">{{ round.name }}</h6>
@@ -33,13 +33,16 @@
                             {{ round.total_questions }} Qs | {{ round.points_per_question }} Pts
                         </small>
                         
+                        {% if session.user.role == 'admin' %}
                         {% if round.is_active and ('Tie Breaker' in round.name or 'Clincher' in round.name) %}
                         <form method="POST" action="{{ url_for('events.pb_add_question', segment_id=round.id) }}" class="mt-2 ajax-form">
                             <button type="submit" class="btn btn-sm btn-light py-1 px-3" style="font-size: 0.75rem; border-radius: 6px; font-weight: 700;" onclick="return confirm('Add an extra Sudden Death question to this round?');"><i class="fa-solid fa-plus me-1"></i> 1 Question</button>
                         </form>
                         {% endif %}
+                        {% endif %}
                     </div>
                     
+                    {% if session.user.role == 'admin' %}
                     <div>
                         {% if round.is_active %}
                             <form method="POST" action="{{ url_for('events.toggle_segment', event_id=event.id, segment_id=round.id) }}" class="ajax-form">
@@ -51,6 +54,9 @@
                             </form>
                         {% endif %}
                     </div>
+                    {% else %}
+                    <div><span class="badge bg-secondary">Read Only</span></div>
+                    {% endif %}
                 </div>
                 {% else %}
                 <div class="text-center text-muted py-4" style="background: rgba(0,0,0,0.02); border-radius: 10px;">
@@ -60,7 +66,7 @@
                 {% endfor %}
             </div>
 
-            <!-- THE FIX: Wrapped in an ID so AJAX can find and update it! -->
+            {% if session.user.role == 'admin' %}
             <div id="evaluation-wrapper">
                 {% if active_seg %}
                 <div id="evaluation-container" class="mt-4 p-4 shadow-sm" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px;">
@@ -72,6 +78,7 @@
                 </div>
                 {% endif %}
             </div>
+            {% endif %}
             
         </div>
 
@@ -110,7 +117,6 @@
     </div>
 </div>
 
-
 <!-- ========================================== -->
 <!-- TAB 2: CONFIGURATION & SETUP               -->
 <!-- ========================================== -->
@@ -123,6 +129,7 @@
                 <h3 style="margin: 0; color: #1e293b;"><i class="fa-solid fa-layer-group text-primary me-2"></i> Rounds Config</h3>
             </div>
             
+            {% if session.user.role == 'admin' %}
             <form id="addSegmentForm" method="POST" action="{{ url_for('events.pb_add_segment', event_id=event.id) }}" class="quick-add-form mb-4 shadow-sm ajax-form" style="background: rgba(59, 130, 246, 0.03);">
                 <div class="row g-2 mb-3">
                     <div class="col-3"><input type="number" name="order_index" class="form-control" placeholder="Order #" required></div>
@@ -141,10 +148,10 @@
                     <button type="submit" class="btn btn-primary fw-bold px-4"><i class="fa-solid fa-plus me-1"></i> Add</button>
                 </div>
             </form>
+            {% endif %}
 
             <div id="setup-segments-list" style="display: flex; flex-direction: column; gap: 8px;">
                 {% for seg in event.segments|sort(attribute='order_index') %}
-                <!-- Added data attributes for JS Validation Scanning -->
                 <div class="shadow-sm segment-row" data-id="{{ seg.id }}" data-order="{{ seg.order_index }}" data-name="{{ seg.name|lower|escape }}" data-final="{{ 'true' if seg.is_final else 'false' }}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); background: white;">
                     <div>
                         <strong style="color: #1e293b; font-size: 1.05rem;">{{ seg.order_index }}. {{ seg.name }}</strong>
@@ -152,12 +159,15 @@
                         <br>
                         <small class="text-muted mt-1 d-block"><i class="fa-solid fa-list-ol me-1 text-secondary"></i> {{ seg.total_questions }} Qs &nbsp;|&nbsp; <i class="fa-solid fa-star me-1 text-warning"></i> {{ seg.points_per_question }} Pts &nbsp;|&nbsp; <i class="fa-solid fa-trophy me-1 text-primary"></i> Top {{ seg.qualifying_count if seg.qualifying_count > 0 else 'All' }}</small>
                     </div>
+                    
+                    {% if session.user.role == 'admin' %}
                     <div style="display: flex; gap: 5px;">
                         <button type="button" class="btn btn-outline-primary btn-sm" style="border: none;" onclick="openEditSegment({{ seg.id }}, {{ seg.order_index }}, '{{ seg.name | replace('\'', '\\\'') }}', {{ seg.points_per_question }}, {{ seg.total_questions }}, {{ seg.qualifying_count }}, '{{ seg.is_final }}')"><i class="fa-solid fa-pen"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_segment', event_id=event.id, segment_id=seg.id) }}" class="ajax-form d-inline">
                             <button type="submit" class="btn btn-outline-danger btn-sm" style="border: none;" onclick="return confirm('Are you sure you want to completely delete this round?')"><i class="fa-solid fa-trash"></i></button>
                         </form>
                     </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -169,6 +179,7 @@
                 <h3 style="margin: 0; color: #1e293b;"><i class="fa-solid fa-users-rectangle text-accent me-2"></i> Teams & Tabulators</h3>
             </div>
             
+            {% if session.user.role == 'admin' %}
             <form id="addContestantForm" method="POST" action="{{ url_for('events.pb_add_contestant', event_id=event.id) }}" class="quick-add-form mb-4 shadow-sm ajax-form" style="background: rgba(16, 185, 129, 0.03);">
                 <div class="row g-2 mb-3">
                     <div class="col-3"><input type="number" name="candidate_number" class="form-control" placeholder="No." required></div>
@@ -177,17 +188,18 @@
                 <div class="mb-3">
                     <select name="assigned_judge_id" class="form-select" required>
                         <option value="" disabled selected>-- Assign Tabulator Account --</option>
-                        {% for judge in eligible_judges %}
+                        <!-- FIXED: Only users with the explicit 'tabulator' role will be rendered -->
+                        {% for judge in eligible_judges if judge.role|lower == 'tabulator' %}
                         <option value="{{ judge.id }}">{{ judge.name or judge.username }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <button type="submit" class="btn btn-success w-100 fw-bold"><i class="fa-solid fa-user-plus me-1"></i> Register Team</button>
             </form>
+            {% endif %}
 
             <div id="setup-teams-list" style="display: flex; flex-direction: column; gap: 8px;">
                 {% for c in event.contestants|sort(attribute='candidate_number') %}
-                <!-- Added data attributes for JS Validation Scanning -->
                 <div class="shadow-sm team-row" data-id="{{ c.id }}" data-number="{{ c.candidate_number }}" data-tabulator="{{ c.assigned_judge_id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); background: white;">
                     <div>
                         <strong style="color: #1e293b; font-size: 1.05rem;">#{{ c.candidate_number }} {{ c.name }}</strong><br>
@@ -196,12 +208,15 @@
                             {{ c.assigned_judge.name or c.assigned_judge.username }}
                         </span>
                     </div>
+                    
+                    {% if session.user.role == 'admin' %}
                     <div style="display: flex; gap: 5px;">
                         <button type="button" class="btn btn-outline-success btn-sm" style="border: none;" onclick="openEditContestant({{ c.id }}, '{{ c.candidate_number }}', '{{ c.name | replace('\'', '\\\'') }}', {{ c.assigned_judge_id }})"><i class="fa-solid fa-pen"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" class="ajax-form d-inline">
                             <button type="submit" class="btn btn-outline-danger btn-sm" style="border: none;" onclick="return confirm('Remove this Team and their assigned Tabulator?')"><i class="fa-solid fa-trash"></i></button>
                         </form>
                     </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -210,6 +225,7 @@
     </div>
 </div>
 
+{% if session.user.role == 'admin' %}
 <!-- ========================================== -->
 <!-- MODALS (EDIT ROUND & EDIT TEAM)            -->
 <!-- ========================================== -->
@@ -258,7 +274,8 @@
             <div class="mb-4">
                 <label class="text-xs text-muted">Assigned Tabulator</label>
                 <select name="assigned_judge_id" class="form-select" required>
-                    {% for judge in eligible_judges %}
+                    <!-- FIXED: Only users with the explicit 'tabulator' role will be rendered -->
+                    {% for judge in eligible_judges if judge.role|lower == 'tabulator' %}
                     <option value="{{ judge.id }}">{{ judge.name or judge.username }}</option>
                     {% endfor %}
                 </select>
@@ -270,15 +287,14 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 <style>
-    /* Safe CSS for Edit Modals */
     .pb-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
     .pb-modal-content { background: white; border-radius: 14px; width: 100%; max-width: 450px; padding: 25px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); animation: fadeScaleUp 0.2s ease-out forwards; }
     @keyframes fadeScaleUp { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
 </style>
 
-<!-- Custom Vanilla JS Form Hijacking & Engine -->
 <script>
     window.pbAllFinished = false;
 
@@ -313,9 +329,9 @@
         return true;
     };
 
-    // Modal Controls
     window.openEditSegment = function(id, order, name, pts, q, top, is_final) {
         const form = document.getElementById('editSegmentForm');
+        if(!form) return;
         form.action = `/events/{{ event.id }}/pb_edit_segment/${id}`;
         form.querySelector('[name="order_index"]').value = order;
         form.querySelector('[name="name"]').value = name;
@@ -328,6 +344,7 @@
 
     window.openEditContestant = function(id, num, name, judgeId) {
         const form = document.getElementById('editContestantForm');
+        if(!form) return;
         form.action = `/events/{{ event.id }}/pb_edit_contestant/${id}`;
         form.querySelector('[name="candidate_number"]').value = num;
         form.querySelector('[name="name"]').value = name;
@@ -336,11 +353,10 @@
     };
 
     window.closePbModals = function() {
-        document.getElementById('pbEditSegmentModal').style.display = 'none';
-        document.getElementById('pbEditContestantModal').style.display = 'none';
+        if(document.getElementById('pbEditSegmentModal')) document.getElementById('pbEditSegmentModal').style.display = 'none';
+        if(document.getElementById('pbEditContestantModal')) document.getElementById('pbEditContestantModal').style.display = 'none';
     };
 
-    // Bulletproof Tab Switcher (With sessionStorage Memory!)
     window.switchPbTab = function(tabName) {
         sessionStorage.setItem('pbActiveTab', tabName);
         const btnMission = document.getElementById('btn-tab-mission');
@@ -348,18 +364,25 @@
         const contentMission = document.getElementById('tab-content-mission');
         const contentSetup = document.getElementById('tab-content-setup');
 
+        // FIXED: Clear inline styles completely so `.btn-primary` functions correctly
         if (tabName === 'mission') {
             contentMission.style.display = 'block'; contentSetup.style.display = 'none';
-            btnMission.className = 'btn btn-primary fw-bold px-4'; btnMission.style.background = 'var(--primary)'; btnMission.style.color = '#fff';
-            btnSetup.className = 'btn btn-outline-secondary fw-bold px-4'; btnSetup.style.background = 'transparent'; btnSetup.style.color = '#64748b';
+            btnMission.className = 'btn btn-primary fw-bold px-4 shadow-sm';
+            btnSetup.className = 'btn text-muted fw-bold px-4';
         } else {
             contentMission.style.display = 'none'; contentSetup.style.display = 'block';
-            btnMission.className = 'btn btn-outline-secondary fw-bold px-4'; btnMission.style.background = 'transparent'; btnMission.style.color = '#64748b';
-            btnSetup.className = 'btn btn-primary fw-bold px-4'; btnSetup.style.background = 'var(--primary)'; btnSetup.style.color = '#fff';
+            btnMission.className = 'btn text-muted fw-bold px-4';
+            btnSetup.className = 'btn btn-primary fw-bold px-4 shadow-sm';
         }
     };
 
-    // --- SEAMLESS HTMX-STYLE AJAX ENGINE & VALIDATIONS ---
+    function applyPbErrorGlow(input) {
+        if(!input) return;
+        input.style.borderColor = '#ef4444';
+        input.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+        setTimeout(() => { input.style.borderColor = ''; input.style.boxShadow = ''; }, 3000);
+    }
+
     window.attachSeamlessAjax = function() {
         document.querySelectorAll('.ajax-form').forEach(form => {
             if (form.dataset.ajaxAttached) return;
@@ -367,26 +390,27 @@
 
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
-                
-                // === 1. SMART DOM-BASED VALIDATIONS ===
                 let hasError = false;
 
-                // Validation for Segments (Rounds)
                 if (form.id === 'addSegmentForm' || form.id === 'editSegmentForm') {
                     const formId = form.id === 'editSegmentForm' ? parseInt(form.action.split('/').pop()) : null;
-                    const formOrder = parseInt(form.querySelector('[name="order_index"]').value);
-                    const formName = form.querySelector('[name="name"]').value.trim().toLowerCase();
+                    const orderInput = form.querySelector('[name="order_index"]');
+                    const nameInput = form.querySelector('[name="name"]');
+                    const formOrder = parseInt(orderInput.value);
+                    const formName = nameInput.value.trim().toLowerCase();
                     const formIsFinal = form.querySelector('[name="is_final"]').checked;
 
                     document.querySelectorAll('.segment-row').forEach(row => {
                         if (hasError) return;
                         const rowId = parseInt(row.dataset.id);
-                        if (rowId === formId) return; // Skip self when editing
+                        if (rowId === formId) return;
 
                         if (parseInt(row.dataset.order) === formOrder) {
+                            applyPbErrorGlow(orderInput);
                             if(typeof window.showToast === 'function') window.showToast('error', 'Order # already exists!');
                             hasError = true;
                         } else if (row.dataset.name === formName) {
+                            applyPbErrorGlow(nameInput);
                             if(typeof window.showToast === 'function') window.showToast('error', 'A round with this name already exists!');
                             hasError = true;
                         } else if (formIsFinal && row.dataset.final === 'true') {
@@ -396,30 +420,32 @@
                     });
                 }
 
-                // Validation for Teams (Contestants)
                 if (form.id === 'addContestantForm' || form.id === 'editContestantForm') {
                     const formId = form.id === 'editContestantForm' ? parseInt(form.action.split('/').pop()) : null;
-                    const formNum = parseInt(form.querySelector('[name="candidate_number"]').value);
-                    const formTabulator = parseInt(form.querySelector('[name="assigned_judge_id"]').value);
+                    const numInput = form.querySelector('[name="candidate_number"]');
+                    const tabulatorInput = form.querySelector('[name="assigned_judge_id"]');
+                    const formNum = parseInt(numInput.value);
+                    const formTabulator = parseInt(tabulatorInput.value);
 
                     document.querySelectorAll('.team-row').forEach(row => {
                         if (hasError) return;
                         const rowId = parseInt(row.dataset.id);
-                        if (rowId === formId) return; // Skip self when editing
+                        if (rowId === formId) return;
 
                         if (parseInt(row.dataset.number) === formNum) {
+                            applyPbErrorGlow(numInput);
                             if(typeof window.showToast === 'function') window.showToast('error', 'Team No. already exists!');
                             hasError = true;
                         } else if (parseInt(row.dataset.tabulator) === formTabulator) {
+                            applyPbErrorGlow(tabulatorInput);
                             if(typeof window.showToast === 'function') window.showToast('error', 'This Tabulator is already assigned to another team!');
                             hasError = true;
                         }
                     });
                 }
 
-                if (hasError) return; // Abort submission if any validation failed!
+                if (hasError) return;
 
-                // === 2. AJAX SUBMISSION ===
                 const submitBtn = form.querySelector('button[type="submit"]');
                 const originalHtml = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -428,19 +454,18 @@
                 try {
                     const formData = new FormData(form);
                     await fetch(form.action, { method: form.method, body: formData });
-                    
                     const res = await fetch(window.location.href);
                     const html = await res.text();
-                    
                     const doc = new DOMParser().parseFromString(html, 'text/html');
                     
-                    // Update Setup Elements
                     document.getElementById('setup-segments-list').innerHTML = doc.getElementById('setup-segments-list').innerHTML;
                     document.getElementById('setup-teams-list').innerHTML = doc.getElementById('setup-teams-list').innerHTML;
-                    
-                    // Update Mission Control Elements
                     document.getElementById('mission-controls-list').innerHTML = doc.getElementById('mission-controls-list').innerHTML;
-                    document.getElementById('evaluation-wrapper').innerHTML = doc.getElementById('evaluation-wrapper').innerHTML;
+                    
+                    const evalWrapper = doc.getElementById('evaluation-wrapper');
+                    if (evalWrapper && document.getElementById('evaluation-wrapper')) {
+                        document.getElementById('evaluation-wrapper').innerHTML = evalWrapper.innerHTML;
+                    }
                     
                     closePbModals();
                     if(form.classList.contains('quick-add-form')) form.reset();
@@ -459,14 +484,11 @@
         });
     };
 
-    // On Load Initializations
     document.addEventListener('DOMContentLoaded', function() {
         const savedTab = sessionStorage.getItem('pbActiveTab') || 'mission';
         switchPbTab(savedTab);
-        
         attachSeamlessAjax();
 
-        // Start the Real-time Mission Control Polling
         setInterval(() => {
             if (document.getElementById('tab-content-mission').style.display === 'none') return;
             fetch(`/events/api/{{ event.id }}/pb_mission_control?_=` + new Date().getTime())

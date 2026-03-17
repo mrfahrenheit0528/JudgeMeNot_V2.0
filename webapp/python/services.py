@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from webapp.python.models import Event, Score, Contestant, Criteria
+from webapp.python.models import Event, Score, Contestant, Criteria, JudgeProgress, Score
 
 def submit_pageant_score(db: Session, judge_id: int, contestant_id: int, criteria_id: int, score_value: float):
     score = db.query(Score).filter_by(
@@ -102,3 +102,46 @@ def get_live_leaderboard(db: Session, event_id: int):
         rank += 1
         
     return results
+
+def calculate_dashboard_progress(db, active_events, recent_events):
+    """Calculates global and per-event progress percentages for the dashboard."""
+    # --- 1. GLOBAL SCORES SUBMITTED (Active Events Only) ---
+    global_expected = 0
+    global_actual = 0
+    
+    for event in active_events:
+        if event.event_type == 'Score-Based':
+            judges_count = len(event.assigned_judges)
+            for seg in event.segments:
+                global_expected += judges_count
+                global_actual += db.query(JudgeProgress).filter(JudgeProgress.segment_id == seg.id, JudgeProgress.is_submitted == True).count()
+        else: # Point-Based
+            contestant_count = len(event.contestants)
+            for seg in event.segments:
+                qs = seg.total_questions or 0
+                global_expected += contestant_count * qs
+                global_actual += db.query(Score).filter(Score.segment_id == seg.id).count()
+                
+    global_progress_pct = int((global_actual / global_expected) * 100) if global_expected > 0 else 0
+    
+    # --- 2. INDIVIDUAL EVENT PROGRESS (For the Progress Bars) ---
+    event_progress = {}
+    for event in recent_events:
+        expected = 0
+        actual = 0
+        
+        if event.event_type == 'Score-Based':
+            judges_count = len(event.assigned_judges)
+            for seg in event.segments:
+                expected += judges_count
+                actual += db.query(JudgeProgress).filter(JudgeProgress.segment_id == seg.id, JudgeProgress.is_submitted == True).count()
+        else:
+            contestant_count = len(event.contestants)
+            for seg in event.segments:
+                qs = seg.total_questions or 0
+                expected += contestant_count * qs
+                actual += db.query(Score).filter(Score.segment_id == seg.id).count()
+        
+        event_progress[event.id] = int((actual / expected) * 100) if expected > 0 else 0
+        
+    return global_progress_pct, event_progress

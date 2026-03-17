@@ -1,0 +1,107 @@
+/* webapp/static/css/admin.css */
+/* Bento Box Dashboard */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--accent-light);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin-right: 1.5rem;
+}
+
+.stat-icon.primary { background: var(--accent-light); color: var(--primary-color); }
+.stat-icon.success { background: #ecfdf5; color: var(--success); }
+.stat-icon.warning { background: #fffbeb; color: var(--warning); }
+
+.stat-details h3 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--text-main);
+}
+
+.stat-details p {
+    margin: 0;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+/* Admin List Cards (Segments, Criteria) */
+.admin-card {
+    background: #f8fafc;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-md);
+    padding: 1.2rem;
+    transition: all 0.2s ease;
+}
+
+.admin-card:hover {
+    background: var(--panel-bg);
+    box-shadow: var(--shadow-md);
+    border-color: #cbd5e1;
+}
+
+.admin-card.active {
+    border-left: 4px solid var(--success);
+    background: #f0fdf4;
+}
+
+.admin-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--panel-border);
+}
+
+/* Modals */
+.admin-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 1050;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon, .btn-icon-raw {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    padding: 5px 8px;
+    border-radius: 6px;
+}
+
+.btn-icon:hover { background: #e2e8f0; color: var(--primary-color); }
+.text-danger:hover { color: var(--danger) !important; background: #fee2e2; }

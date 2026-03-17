@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Participants Directory{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+    .participant-avatar {
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--panel-border);
+        box-shadow: var(--shadow-sm);
+    }
+    .placeholder-avatar {
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        border: 2px solid var(--panel-border);
+    }
+    .event-group {
+        transition: all 0.2s ease;
+    }
+    .event-group:hover {
+        border-color: var(--accent-light);
+        box-shadow: var(--shadow-md);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container fade-in-up">
+    <header class="d-flex justify-content-between align-items-end mb-4 pb-3" style="border-bottom: 1px solid var(--panel-border);">
+        <div>
+            <h2 class="fw-bold m-0" style="color: var(--text-main); letter-spacing: -0.5px;"><i class="fa-solid fa-address-book text-warning me-2"></i> Participants Directory</h2>
+            <p class="text-muted m-0 mt-1">Detailed statistics and groupings of all participants across every event.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm bg-white shadow-sm" style="border-color: var(--panel-border);"><i class="fa-solid fa-arrow-left me-1"></i> Dashboard</a>
+        </div>
+    </header>
+
+    {% for event in events %}
+    <div class="glass-panel event-group mb-4" style="padding: 0; overflow: hidden;">
+        <div class="d-flex justify-content-between align-items-center" style="padding: 20px 25px; background: rgba(0,0,0,0.01); border-bottom: 1px solid var(--panel-border);">
+            <div>
+                <h4 class="fw-bold m-0 text-main" style="letter-spacing: -0.5px;">{{ event.name }}</h4>
+                <div class="mt-2">
+                    <span class="badge {% if event.event_type == 'Point-Based' %}bg-primary{% else %}bg-secondary{% endif %}">{{ event.event_type }}</span>
+                    {% if event.status == 'Ongoing' %}
+                        <span class="badge bg-success ms-1"><i class="fa-solid fa-circle-dot fa-fade me-1"></i> Live</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark border ms-1">{{ event.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-end">
+                <h3 class="fw-bold text-accent m-0">{{ event.contestants|length }}</h3>
+                <small class="text-muted fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Total Enlisted</small>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background: #ffffff;">
+                    <tr>
+                        <th style="padding: 15px 25px; color: var(--text-muted); width: 80px; border-bottom: 2px solid var(--panel-border);">No.</th>
+                        <th style="padding: 15px 15px; color: var(--text-muted); width: 80px; border-bottom: 2px solid var(--panel-border);">Photo</th>
+                        <th style="padding: 15px 15px; color: var(--text-muted); border-bottom: 2px solid var(--panel-border);">Name</th>
+                        <th style="padding: 15px 25px; color: var(--text-muted); text-align: right; border-bottom: 2px solid var(--panel-border);">
+                            {% if event.event_type == 'Point-Based' %}Assigned Tabulator{% else %}Category{% endif %}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in event.contestants|sort(attribute='candidate_number') %}
+                    <tr>
+                        <td style="padding: 15px 25px; font-weight: 700; color: var(--text-main); font-size: 1.1rem;">#{{ c.candidate_number }}</td>
+                        <td style="padding: 10px 15px;">
+                            {% if c.image_path %}
+                                <img src="{{ url_for('static', filename=c.image_path) }}" class="participant-avatar" alt="Photo">
+                            {% else %}
+                                <div class="placeholder-avatar"><i class="fa-solid fa-user"></i></div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 15px 15px; font-weight: 600; color: var(--text-main); font-size: 1.05rem;">{{ c.name }}</td>
+                        <td style="padding: 15px 25px; text-align: right;">
+                            {% if event.event_type == 'Point-Based' %}
+                                <span class="badge bg-light text-dark border p-2" style="font-size: 0.85rem;"><i class="fa-solid fa-user-tie text-primary me-1"></i> {{ c.assigned_judge.name or c.assigned_judge.username if c.assigned_judge else 'None' }}</span>
+                            {% else %}
+                                {% if c.gender == 'Male' %}
+                                    <span class="badge p-2" style="background: rgba(29, 78, 216, 0.1); color: #1d4ed8; font-size: 0.85rem;"><i class="fa-solid fa-mars me-1"></i> Male</span>
+                                {% elif c.gender == 'Female' %}
+                                    <span class="badge p-2" style="background: rgba(219, 39, 119, 0.1); color: #db2777; font-size: 0.85rem;"><i class="fa-solid fa-venus me-1"></i> Female</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark border p-2" style="font-size: 0.85rem;"><i class="fa-solid fa-circle-dot me-1"></i> Overall</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted" style="background: #ffffff;">
+                            <i class="fa-solid fa-users-slash fa-2x mb-2" style="opacity: 0.3;"></i>
+                            <p class="m-0">No participants enlisted in this event yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="glass-panel text-center py-5">
+        <i class="fa-solid fa-folder-open fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
+        <h4 class="text-muted fw-bold">No Events Found</h4>
+        <p class="text-muted mb-0">Create an event to start tracking participants.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

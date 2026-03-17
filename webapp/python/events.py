@@ -33,7 +33,7 @@ def create():
     return render_template('event_create.html')
 
 @events_bp.route('/<int:event_id>/manage')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer'])
 def manage(event_id):
     db = SessionLocal()
     try:
@@ -119,8 +119,7 @@ def toggle_segment(event_id, segment_id):
                     s.is_active = False
                 segment.is_active = True
                 
-                # --- THE FIX: STRICT TOP N VAULT ENGINE ---
-                # This explicitly locks only the Top N contestants into the database
+                # Vault logic for Top N qualifiers
                 qualifying_count = getattr(segment, 'qualifying_count', 0) or 0
                 
                 if event.event_type == 'Score-Based' and segment.is_final and qualifying_count > 0:
@@ -136,7 +135,6 @@ def toggle_segment(event_id, segment_id):
                         top_n = cat_list[:qualifying_count]
                         qualifiers.extend([str(r['contestant'].id) for r in top_n])
                         
-                    # Vault the allowed IDs securely into the segment
                     segment.participating_contestants = ",".join(qualifiers)
                     
             else:
@@ -416,7 +414,7 @@ def quick_create_judge(event_id):
 # API / LIVE POLLING ENDPOINTS
 # =====================================================================
 @events_bp.route('/api/<int:event_id>/status')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer'])
 def api_event_status(event_id):
     db = SessionLocal()
     try:
@@ -452,7 +450,7 @@ def api_event_status(event_id):
 # POINT-BASED (QUIZ BEE) HUB & EVALUATION
 # =====================================================================
 @events_bp.route('/api/<int:event_id>/pb_mission_control')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer'])
 def pb_mission_control(event_id):
     db = SessionLocal()
     try:
@@ -762,5 +760,20 @@ def pb_edit_contestant(event_id, contestant_id):
             contestant.assigned_judge_id = request.form.get('assigned_judge_id')
             db.commit()
         return redirect(url_for('events.manage', event_id=event_id))
+    finally:
+        db.close()
+
+
+# =====================================================================
+# GLOBAL PARTICIPANTS DIRECTORY ROUTE
+# =====================================================================
+@events_bp.route('/participants_directory')
+@require_role(['admin', 'admin-viewer'])
+def participants_directory():
+    db = SessionLocal()
+    try:
+        # Get all events to display their participants
+        events = db.query(Event).order_by(Event.id.desc()).all()
+        return render_template('admin_participants.html', events=events)
     finally:
         db.close()

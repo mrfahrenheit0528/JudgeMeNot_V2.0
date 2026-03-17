@@ -1,69 +1,90 @@
 {% extends "base.html" %}
 
-{% block title %}All Events{% endblock %}
+{% block title %}Manage Events{% endblock %}
 
 {% block content %}
 <div class="dashboard-container fade-in-up">
-    <header class="page-header mb-4">
+    <!-- Header -->
+    <header class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="fa-solid fa-calendar-days text-primary me-2"></i> Manage Events</h2>
-            <p class="text-muted m-0">View, manage, and configure all events in the system.</p>
+            <h2 class="m-0 d-flex align-items-center fw-bold" style="color: #1e293b;">
+                <i class="fa-solid fa-calendar-days text-primary me-2"></i> Manage Events
+            </h2>
+            <p class="text-muted mt-1 mb-0">View, manage, and configure all events in the system.</p>
         </div>
-        <div class="header-actions">
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
-            <a href="{{ url_for('events.create') }}" class="btn btn-primary glass-effect"><i class="fa-solid fa-plus me-1"></i> New Event</a>
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('index') }}" class="btn btn-link text-primary text-decoration-none fw-bold"><i class="fa-solid fa-arrow-left me-1"></i> Dashboard</a>
+            {% if session.user.role == 'admin' %}
+            <a href="{{ url_for('events.create') }}" class="btn btn-primary glass-effect shadow-sm fw-bold px-4"><i class="fa-solid fa-plus me-2"></i> New Event</a>
+            {% endif %}
         </div>
     </header>
 
-    <div class="glass-panel" style="padding: 0; overflow: hidden; border-radius: 12px;">
-        <table class="table mb-0" style="width: 100%; border-collapse: collapse;">
-            <thead style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.05);">
-                <tr>
-                    <th style="padding: 15px 20px; text-align: left; color: var(--text-muted); font-weight: 600;">Event Name</th>
-                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Type</th>
-                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Status</th>
-                    <th style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 600;">Contestants</th>
-                    <th style="padding: 15px 20px; text-align: right; color: var(--text-muted); font-weight: 600;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for event in events %}
-                <tr style="border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;">
-                    <td style="padding: 15px 20px;">
-                        <strong style="color: var(--text-bright); font-size: 1.05rem;">{{ event.name }}</strong>
-                        <div class="text-muted" style="font-size: 0.8rem; margin-top: 4px;">Created: {{ event.last_active.strftime('%B %d, %Y') if event.last_active else 'N/A' }}</div>
-                    </td>
-                    <td style="padding: 15px 20px; text-align: center;">
-                        <span class="badge bg-secondary text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">{{ event.event_type }}</span>
-                    </td>
-                    <td style="padding: 15px 20px; text-align: center;">
-                        {% if event.status == 'Ongoing' %}
-                            <span class="badge bg-success text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;"><i class="fa-solid fa-play me-1"></i> Ongoing</span>
-                        {% else %}
-                            <span class="badge bg-warning text-white" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;"><i class="fa-solid fa-pause me-1"></i> Inactive</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 15px 20px; text-align: center; color: var(--text-muted); font-weight: 500;">
-                        {{ event.contestants|length }}
-                    </td>
-                    <td style="padding: 15px 20px; text-align: right;">
-                        <a href="{{ url_for('events.manage', event_id=event.id) }}" class="btn btn-sm btn-outline-primary glass-effect"><i class="fa-solid fa-gear me-1"></i> Manage</a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" class="text-center py-5 text-muted">
-                        <i class="fa-solid fa-calendar-xmark fa-2x mb-2" style="opacity: 0.3;"></i>
-                        <p class="m-0">No events found in the system.</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Events Table -->
+    <div class="glass-panel shadow-sm" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle" style="width: 100%;">
+                <thead style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                    <tr>
+                        <th class="px-4 py-3" style="color: #64748b; font-weight: 600; width: 35%;">Event Name</th>
+                        <th class="py-3" style="color: #64748b; font-weight: 600; width: 20%;">Type</th>
+                        <th class="py-3" style="color: #64748b; font-weight: 600; width: 15%;">Status</th>
+                        <th class="py-3 text-center" style="color: #64748b; font-weight: 600; width: 15%;">Contestants</th>
+                        <th class="px-4 py-3 text-end" style="color: #64748b; font-weight: 600; width: 15%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events|sort(attribute='id', reverse=True) %}
+                    <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                        
+                        <!-- Event Name & Date -->
+                        <td class="px-4 py-3">
+                            <strong style="color: #0f172a; font-size: 1.05rem;">{{ event.name }}</strong>
+                            <br>
+                            <small class="text-muted">Created: {{ event.last_active.strftime('%B %d, %Y') if event.last_active else 'N/A' }}</small>
+                        </td>
+                        
+                        <!-- Event Type -->
+                        <td class="py-3">
+                            <span class="text-muted" style="font-weight: 500;">{{ event.event_type }}</span>
+                        </td>
+                        
+                        <!-- Status Badge -->
+                        <td class="py-3">
+                            {% if event.status == 'Ongoing' %}
+                                <span class="text-success fw-bold"><i class="fa-solid fa-play me-1"></i> Active</span>
+                            {% else %}
+                                <span class="text-muted fw-bold"><i class="fa-solid fa-pause me-1"></i> Inactive</span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Contestants Count -->
+                        <td class="py-3 text-center text-muted fw-bold" style="font-size: 1.05rem;">
+                            {{ event.contestants|length }}
+                        </td>
+                        
+                        <!-- Actions -->
+                        <td class="px-4 py-3 text-end">
+                            <a href="{{ url_for('events.manage', event_id=event.id) }}" class="btn btn-sm btn-outline-primary fw-bold bg-white" style="border-radius: 8px; padding: 6px 16px;">
+                                {% if session.user.role == 'admin' %}
+                                <i class="fa-solid fa-gear me-1"></i> Manage
+                                {% else %}
+                                <i class="fa-solid fa-eye me-1"></i> View
+                                {% endif %}
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-calendar-xmark fa-2x mb-2" style="opacity: 0.3;"></i>
+                            <p class="m-0">No events found in the system.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
-
-<style>
-    tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
-</style>
 {% endblock %}

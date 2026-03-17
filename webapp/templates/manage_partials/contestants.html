@@ -5,6 +5,7 @@
     </div>
     
     <!-- Quick Add Form -->
+    {% if session.user.role == 'admin' %}
     <form method="POST" action="{{ url_for('events.add_contestant', event_id=event.id) }}" enctype="multipart/form-data" class="quick-add-form" id="addContestantForm" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
         
         <!-- Row 1: Number, Name, Add -->
@@ -33,6 +34,7 @@
             {% endif %}
         </div>
     </form>
+    {% endif %}
     
     <!-- Contestants List -->
     <div class="contestants-list mt-4">
@@ -49,10 +51,12 @@
                         <span class="item-name">{{ c.name }}</span>
                     </div>
                     <div class="item-actions">
+                        {% if session.user.role == 'admin' %}
                         <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editContestantModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" style="display:inline;">
                             <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove?')"><i class="fa-solid fa-trash"></i></button>
                         </form>
+                        {% endif %}
                     </div>
                 </div>
                 {% else %}
@@ -71,10 +75,12 @@
                         <span class="item-name">{{ c.name }}</span>
                     </div>
                     <div class="item-actions">
+                        {% if session.user.role == 'admin' %}
                         <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editContestantModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" style="display:inline;">
                             <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove?')"><i class="fa-solid fa-trash"></i></button>
                         </form>
+                        {% endif %}
                     </div>
                 </div>
                 {% else %}

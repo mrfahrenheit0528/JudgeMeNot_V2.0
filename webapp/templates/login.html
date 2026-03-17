@@ -1,41 +1,203 @@
-{% extends "base.html" %}
-
+{% extends 'base.html' %}
 {% block title %}Login{% endblock %}
 
-{% block content %}
-<div class="dashboard-container fuse-center" style="display:flex; justify-content:center; align-items:center; height:70vh;">
-    <div class="glass-panel fade-in-up" style="max-width: 400px; width:100%; padding: 2.5rem;">
-        <div class="panel-header" style="justify-content:center; border-bottom: none; margin-bottom:0.5rem;">
-            <h3 style="font-size: 1.5rem;">Sign in to JudgeMeNot</h3>
-        </div>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }}" style="color:var(--danger); text-align:center; padding:0.5rem; margin-bottom:1rem; border-radius:var(--border-radius-sm); background:rgba(247, 118, 142, 0.1);">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+{% block extra_css %}
+<style>
+    /* Ensure the body expands to fill height for the split screen */
+    body {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* The main layout wrapper */
+    .split-layout {
+        min-height: calc(100vh - 120px);
+    }
+    
+    /* Right Side Login Panel Styling */
+    .login-panel {
+        padding: 3.5rem 3rem;
+        border-radius: 24px;
+        transition: all 0.3s ease;
+    }
+    
+    .input-group-text {
+        background: transparent;
+        border-right: none;
+        color: var(--text-muted);
+    }
+    .form-control {
+        border-left: none;
+    }
+    
+    /* Form Focus Glow Effects */
+    .input-group:focus-within {
+        box-shadow: 0 0 0 4px var(--accent-light);
+        border-radius: 8px;
+    }
+    .input-group:focus-within .input-group-text,
+    .input-group:focus-within .form-control {
+        border-color: var(--primary-color);
+        color: var(--text-main);
+    }
+    
+    /* Auto-adapts Focus Ring for Dark Theme */
+    html.dark-theme .input-group:focus-within {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    html.dark-theme .input-group:focus-within .input-group-text,
+    html.dark-theme .input-group:focus-within .form-control {
+        border-color: var(--primary-color);
+    }
 
-        <form method="POST" action="{{ url_for('auth.login') }}" style="margin-top: 1rem;">
-            <div style="margin-bottom: 1.25rem;">
-                <label for="username" style="display:block; margin-bottom:0.5rem; color:var(--text-muted); font-size: 0.9rem; font-weight: 500;">Username</label>
-                <div style="position: relative;">
-                    <i class="fa-solid fa-user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
-                    <input type="text" id="username" name="username" required placeholder="Enter your username" style="width:100%; padding:0.75rem 1rem 0.75rem 2.5rem; border-radius:var(--border-radius-sm); border:1px solid var(--text-muted); background:var(--bg-surface); color:var(--text-bright); font-family: inherit;">
+    /* Left Side Info Styling */
+    .hero-section {
+        padding-right: 4rem;
+    }
+
+    /* Team Cards Styling */
+    .team-card {
+        border-radius: 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        padding: 1.5rem !important;
+    }
+    
+    .team-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-color) !important;
+    }
+
+    .team-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #58a6ff; /* Light blue border to match your design */
+        margin-bottom: 1rem;
+        background: var(--panel-bg);
+    }
+
+    .team-role {
+        color: #58a6ff;
+        font-style: italic;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Adapt blue accents in Dark Mode */
+    html.dark-theme .team-avatar {
+        border-color: var(--primary-color);
+    }
+    html.dark-theme .team-role {
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row align-items-center split-layout fade-in-up">
+    
+    <!-- LEFT SIDE: Mission and Team -->
+    <div class="col-lg-7 d-none d-lg-block hero-section">
+        
+        <!-- Branding Logo 
+        <div class="text-center mb-2">
+            <i class="fa-solid fa-gavel text-primary" style="font-size: 3rem; text-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);"></i>
+        </div>
+        -->
+
+        <!-- Our Mission Section -->
+        <h3 class="fw-bold mb-3 text-center" style="color: var(--text-main); letter-spacing: -0.5px;">Our Mission</h3>
+        <p style="color: var(--text-muted); line-height: 1.7; font-size: 1.05rem; text-align: justify; margin-bottom: 3rem;">
+            Judgemenot is a tabulation system designed to promote transparency and fairness. It allows users to view scores and results in real time, ensuring that all participants can track updates instantly. Our platform is intuitive and user-friendly, providing a clear and accurate visualization of scores while maintaining integrity and reliability.
+        </p>
+
+        <!-- Our Team Section -->
+        <h3 class="fw-bold mb-4 text-center" style="color: var(--text-main); letter-spacing: -0.5px;">Our Team</h3>
+        <div class="row g-3 justify-content-center">
+            
+            <!-- Team Member 1: Elmskie -->
+            <div class="col-md-4">
+                <div class="glass-panel text-center team-card h-100 shadow-sm">
+                    <!-- Replace the src with your actual image path, e.g., url_for('static', filename='img/elmskie.jpg') -->
+                    <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=200&h=200&fit=crop" alt="Elmskie" class="team-avatar">
+                    <h5 class="fw-bold mb-1" style="color: var(--text-main);">Elmskie</h5>
+                    <div class="team-role">Project Lead</div>
+                    <small class="text-muted fw-medium">BSCS 3A</small>
                 </div>
             </div>
-            <div style="margin-bottom: 1.5rem;">
-                <label for="password" style="display:block; margin-bottom:0.5rem; color:var(--text-muted); font-size: 0.9rem; font-weight: 500;">Password</label>
-                <div style="position: relative;">
-                    <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
-                    <input type="password" id="password" name="password" required placeholder="Enter your password" style="width:100%; padding:0.75rem 1rem 0.75rem 2.5rem; border-radius:var(--border-radius-sm); border:1px solid var(--text-muted); background:var(--bg-surface); color:var(--text-bright); font-family: inherit;">
+
+            <!-- Team Member 2: Sijay -->
+            <div class="col-md-4">
+                <div class="glass-panel text-center team-card h-100 shadow-sm">
+                    <!-- Replace the src with your actual image path -->
+                    <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop" alt="Sijay" class="team-avatar">
+                    <h5 class="fw-bold mb-1" style="color: var(--text-main);">Sijay</h5>
+                    <div class="team-role">Developer</div>
+                    <small class="text-muted fw-medium">BSCS 3A</small>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%; padding: 0.75rem; font-size: 1.05rem;">
-                <i class="fa-solid fa-right-to-bracket"></i> Login
-            </button>
-        </form>
+
+            <!-- Team Member 3: Rv -->
+            <div class="col-md-4">
+                <div class="glass-panel text-center team-card h-100 shadow-sm">
+                    <!-- Replace the src with your actual image path -->
+                    <img src="https://images.unsplash.com/photo-1517849845537-4d257902454a?w=200&h=200&fit=crop" alt="Rv" class="team-avatar">
+                    <h5 class="fw-bold mb-1" style="color: var(--text-main);">Rv</h5>
+                    <div class="team-role">Designer</div>
+                    <small class="text-muted fw-medium">BSCS 3A</small>
+                </div>
+            </div>
+            
+        </div>
     </div>
+
+    <!-- RIGHT SIDE: Login Form -->
+    <div class="col-lg-5">
+        <div class="glass-panel login-panel shadow-lg">
+            
+            <!-- Mobile Fallback Branding (Only shows on small screens when left side is hidden) -->
+            <div class="text-center mb-4 d-lg-none">
+                <i class="fa-solid fa-gavel text-primary mb-2" style="font-size: 3rem;"></i>
+                <h2 class="fw-bold" style="color: var(--text-main); letter-spacing: -1px;">JudgeMeNot</h2>
+                <p class="text-muted">Sign in to your account</p>
+            </div>
+            
+            <!-- Desktop Form Header -->
+            <div class="text-center mb-4 d-none d-lg-block">
+                <i class="fa-solid fa-gavel text-primary mb-2" style="font-size: 2.5rem;"></i>
+                <h3 class="fw-bold mb-1" style="color: var(--text-main); letter-spacing: -0.5px;">JudgeMeNot</h3>
+                <p class="text-muted">System Authentication</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.login') }}">
+                <div class="mb-4">
+                    <label class="form-label" style="font-weight: 600;">Username</label>
+                    <div class="input-group shadow-sm" style="border-radius: 8px;">
+                        <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" name="username" class="form-control" placeholder="Enter your username" required autofocus>
+                    </div>
+                </div>
+                
+                <div class="mb-5">
+                    <label class="form-label" style="font-weight: 600;">Password</label>
+                    <div class="input-group shadow-sm" style="border-radius: 8px;">
+                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 py-3 fs-5 shadow" style="border-radius: 12px; font-weight: 700;">
+                    Secure Login <i class="fa-solid fa-arrow-right-to-bracket ms-2"></i>
+                </button>
+            </form>
+            
+            <div class="text-center mt-5 pt-4 text-muted" style="font-size: 0.85rem; border-top: 1px solid var(--panel-border);">
+                &copy; 2026 JudgeMeNot Tabulation System. All rights reserved.
+            </div>
+        </div>
+    </div>
+    
 </div>
 {% endblock %}

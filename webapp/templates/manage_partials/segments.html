@@ -5,6 +5,7 @@
     </div>
     
     <!-- Quick Add Form -->
+    {% if session.user.role == 'admin' %}
     <form method="POST" action="{{ url_for('events.add_segment', event_id=event.id) }}" class="quick-add-form" id="addSegmentForm" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 12px; width: 100%;">
         
         <!-- Dynamic Input Container: Swaps between Weight and Top N -->
@@ -22,6 +23,7 @@
         
         <button type="submit" class="btn btn-primary btn-sm glass-effect" style="flex: 0 0 auto;"><i class="fa-solid fa-plus me-1"></i> Add</button>
     </form>
+    {% endif %}
     
     <!-- Segments List -->
     <div class="segment-list mt-4">
@@ -58,19 +60,22 @@
                 </div>
                 
                 <div class="admin-card-actions">
-                    <form method="POST" action="{{ url_for('events.toggle_segment', event_id=event.id, segment_id=segment.id) }}" style="display:inline;">
-                        {% if segment.is_active %}
-                            <!-- THE FIX: Passes Top N Qualifiers parameter to JS Engine -->
-                            <button type="button" class="btn-icon text-warning" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'deactivate', {{ 'true' if segment.is_final else 'false' }}, {{ segment.qualifying_count or 0 }})" title="Deactivate Segment"><i class="fa-solid fa-pause"></i></button>
-                        {% else %}
-                            <button type="button" class="btn-icon text-success" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'activate', {{ 'true' if segment.is_final else 'false' }}, {{ segment.qualifying_count or 0 }})" title="Activate Segment"><i class="fa-solid fa-play"></i></button>
-                        {% endif %}
-                    </form>
-                    <button type="button" class="btn-icon text-secondary" onclick="document.getElementById('editSegmentModal_{{ segment.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
-                    <button type="button" class="btn-icon text-primary" onclick="document.getElementById('addCriteriaModal_{{ segment.id }}').style.display='flex'"><i class="fa-solid fa-list-check"></i></button>
-                    <form method="POST" action="{{ url_for('events.delete_segment', event_id=event.id, segment_id=segment.id) }}" style="display:inline;">
-                        <button type="button" class="btn-icon text-danger" onclick="promptDeactivate(event, this.form, 'Are you sure you want to permanently DELETE this segment?')" title="Delete Segment"><i class="fa-solid fa-trash"></i></button>
-                    </form>
+                    {% if session.user.role == 'admin' %}
+                        <form method="POST" action="{{ url_for('events.toggle_segment', event_id=event.id, segment_id=segment.id) }}" style="display:inline;">
+                            {% if segment.is_active %}
+                                <button type="button" class="btn-icon text-warning" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'deactivate', {{ 'true' if segment.is_final else 'false' }}, {{ segment.qualifying_count or 0 }})" title="Deactivate Segment"><i class="fa-solid fa-pause"></i></button>
+                            {% else %}
+                                <button type="button" class="btn-icon text-success" onclick="promptSegmentToggle(event, this.form, {{ event.id }}, {{ segment.id }}, 'activate', {{ 'true' if segment.is_final else 'false' }}, {{ segment.qualifying_count or 0 }})" title="Activate Segment"><i class="fa-solid fa-play"></i></button>
+                            {% endif %}
+                        </form>
+                        <button type="button" class="btn-icon text-secondary" onclick="document.getElementById('editSegmentModal_{{ segment.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
+                        <button type="button" class="btn-icon text-primary" onclick="document.getElementById('addCriteriaModal_{{ segment.id }}').style.display='flex'"><i class="fa-solid fa-list-check"></i></button>
+                        <form method="POST" action="{{ url_for('events.delete_segment', event_id=event.id, segment_id=segment.id) }}" style="display:inline;">
+                            <button type="button" class="btn-icon text-danger" onclick="promptDeactivate(event, this.form, 'Are you sure you want to permanently DELETE this segment?')" title="Delete Segment"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    {% else %}
+                        <span class="badge bg-secondary" style="font-size: 0.75rem;"><i class="fa-solid fa-eye me-1"></i> View Only</span>
+                    {% endif %}
                 </div>
             </div>
             
@@ -85,10 +90,12 @@
                         <span class="crit-meta">(Weight: {{ c_weight|round|int }}%, Max: {{ c.max_score }})</span>
                     </div>
                     <div class="item-actions">
+                        {% if session.user.role == 'admin' %}
                         <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editCriteriaModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen" style="font-size: 0.8rem;"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_criteria', event_id=event.id, criteria_id=c.id) }}" style="display:inline;">
                             <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove this criteria?')"><i class="fa-solid fa-xmark"></i></button>
                         </form>
+                        {% endif %}
                     </div>
                 </div>
                 {% else %}

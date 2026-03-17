@@ -40,8 +40,10 @@ def create_app(test_config=None):
     app.register_blueprint(leaderboard_bp)                
     app.register_blueprint(scores_bp)  
     
+    # Database and Service Imports
     from webapp.python.models import Event, Contestant, EventJudge, Base
     from webapp.python.database import SessionLocal, engine
+    from webapp.python.services import calculate_dashboard_progress
     
     # =========================================================
     # CREATE ALL MISSING DATABASE TABLES AUTOMATICALLY
@@ -63,7 +65,6 @@ def create_app(test_config=None):
                 events = db.query(Event).filter(Event.id.in_(assigned_event_ids)).all()
                 
                 # Fetch Quiz Bee (Point-Based) Events
-                # Find contestants this tabulator is assigned to
                 pb_assignments = db.query(Contestant).filter(Contestant.assigned_judge_id == user['id']).all()
                 pb_event_ids = [c.event_id for c in pb_assignments]
                 pb_events = db.query(Event).filter(Event.id.in_(pb_event_ids)).all()
@@ -73,18 +74,26 @@ def create_app(test_config=None):
                 
                 return render_template('judge_dashboard.html', title="Judge Dashboard", events=all_assigned_events)
                 
-            # Admin / Admin-Viewer scope
-            active_events_count = db.query(Event).filter(Event.status == 'Ongoing').count()
+            # =========================================================
+            # ADMIN DASHBOARD 
+            # =========================================================
+            active_events = db.query(Event).filter(Event.status == 'Ongoing').all()
+            active_events_count = len(active_events)
             total_participants = db.query(Contestant).count()
             
-            # Fetch only the 3 most recently active/launched events
+            # Fetch the 3 most recently active events for the list
             recent_events = db.query(Event).order_by(Event.last_active.desc()).limit(3).all()
             
+            # Offload heavy progress calculations to the external service engine
+            global_progress_pct, event_progress = calculate_dashboard_progress(db, active_events, recent_events)
+
             return render_template('index.html', 
                                    title="Dashboard", 
                                    events=recent_events,
                                    active_events_count=active_events_count,
-                                   total_participants=total_participants)
+                                   total_participants=total_participants,
+                                   global_progress_pct=global_progress_pct,
+                                   event_progress=event_progress)
         finally:
             db.close()
 

@@ -1,9 +1,157 @@
 {% extends "base.html" %}
-{% block title %}System Settings (Placeholder){% endblock %}
+
+{% block title %}System Settings{% endblock %}
+
 {% block content %}
-<div class="dashboard-container fade-in-up text-center py-5">
-    <h2 class="text-muted"><i class="fa-solid fa-gear mb-3" style="font-size: 3rem;"></i><br>System Settings</h2>
-    <p class="text-muted mt-3">This module will contain global configuration, database backups, audit logs, and aesthetic preferences.</p>
-    <a href="{{ url_for('index') }}" class="btn btn-primary glass-effect mt-4"><i class="fa-solid fa-arrow-left"></i> Return to Dashboard</a>
+<div class="dashboard-container fade-in-up">
+    <!-- Header -->
+    <header class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h2 class="fw-bold m-0" style="color: var(--text-main); letter-spacing: -0.5px;">
+                <i class="fa-solid fa-gear text-muted me-2"></i> System Settings
+            </h2>
+            <p class="text-muted m-0 mt-1">Configure system preferences and view network connections.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm bg-white shadow-sm" style="border-color: var(--panel-border); font-weight: 600;">
+                <i class="fa-solid fa-arrow-left me-1"></i> Dashboard
+            </a>
+        </div>
+    </header>
+
+    <div class="actions-grid">
+        <!-- Setting 1: Connect Devices -->
+        <div class="action-card" onclick="document.getElementById('connectModal').style.display='flex'">
+            <div class="action-icon text-primary"><i class="fa-solid fa-qrcode"></i></div>
+            <span>Connect Devices</span>
+            <p class="text-muted m-0 mt-2 text-sm text-center">View system URL and QR code to easily connect mobile panels.</p>
+        </div>
+
+        <!-- Setting 2: Dark Mode Toggle -->
+        <div class="action-card" id="darkModeToggleCard" onclick="toggleDarkMode()">
+            <div class="action-icon text-secondary" id="darkModeIcon"><i class="fa-solid fa-moon"></i></div>
+            <span id="darkModeText">Enable Dark Mode</span>
+            <p class="text-muted m-0 mt-2 text-sm text-center">Switch the admin interface to a darker, eye-friendly theme.</p>
+        </div>
+    </div>
 </div>
+
+<!-- Connect Devices Modal -->
+<div id="connectModal" class="admin-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); z-index:9999; justify-content:center; align-items:center; padding: 20px;">
+    
+    <div class="glass-panel" style="width: 100%; max-width: 480px; padding: 40px 30px; border-radius: 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); animation: modalPop 0.3s ease-out forwards; position: relative;">
+        
+        <button type="button" class="btn-icon-raw text-muted" style="position: absolute; top: 20px; right: 20px; font-size: 1.2rem;" onclick="this.closest('.admin-modal').style.display='none'">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <h3 style="margin-bottom: 1.8rem; color: var(--primary-color); font-weight: 800; font-size: 1.6rem; letter-spacing: -0.5px;">Connect Devices</h3>
+
+        {% if qr_code %}
+        <div style="background: #fff; padding: 20px; border-radius: 16px; display: inline-block; margin-bottom: 1.5rem; border: 1px solid var(--panel-border); box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" style="width: 240px; height: 240px; object-fit: contain; display: block;">
+        </div>
+        {% else %}
+        <div style="background: #fff; padding: 20px; border-radius: 16px; display: inline-block; margin-bottom: 1.5rem; border: 1px solid #ef4444; color: #ef4444; width: 240px; height: 240px; display:flex; align-items:center; justify-content:center; flex-direction: column;">
+            <i class="fa-solid fa-triangle-exclamation fa-3x mb-3"></i>
+            <p class="m-0 fw-bold">Missing Dependencies</p>
+            <small class="mt-2 text-muted px-3">Run <code>pip install qrcode pillow</code> in your terminal to fix this.</small>
+        </div>
+        {% endif %}
+
+        <p style="margin-bottom: 1.5rem; font-size: 1.1rem; color: var(--text-main); font-weight: 500;">Scan this QR code with the panel's device to connect.</p>
+
+        <div style="background: var(--bg-color); padding: 16px; border-radius: 12px; margin-bottom: 2.5rem; border: 1px solid var(--panel-border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+            <p style="margin: 0; font-family: monospace; font-size: 1.2rem; color: var(--text-main); font-weight: 600; letter-spacing: -0.5px;">{{ url }}</p>
+        </div>
+
+        <button type="button" class="btn btn-primary w-100 shadow-sm" style="padding: 14px; font-size: 1.05rem; font-weight: 700; border-radius: 12px;" onclick="this.closest('.admin-modal').style.display='none'">
+            <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+        </button>
+    </div>
+</div>
+
+<style>
+    .actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    .action-card {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-md);
+        padding: 3rem 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow-sm);
+    }
+    .action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-color);
+    }
+    .action-card span {
+        font-weight: 800;
+        font-size: 1.3rem;
+        color: var(--text-main);
+        letter-spacing: -0.5px;
+        margin-top: 0.5rem;
+        transition: color 0.2s ease;
+    }
+    .action-card:hover span {
+        color: var(--primary-color);
+    }
+    .action-icon {
+        font-size: 3.5rem;
+        margin-bottom: 0.5rem;
+        transition: color 0.2s ease;
+    }
+    @keyframes modalPop {
+        0% { opacity: 0; transform: scale(0.9); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+</style>
+
+<script>
+    // Toggle Logic for Dark Mode
+    function toggleDarkMode() {
+        const htmlElement = document.documentElement;
+        const isCurrentlyDark = htmlElement.classList.toggle('dark-theme');
+        
+        // Save preference to localStorage
+        localStorage.setItem('adminTheme', isCurrentlyDark ? 'dark' : 'light');
+        
+        // Update the card UI instantly
+        updateDarkModeUI(isCurrentlyDark);
+    }
+
+    function updateDarkModeUI(isDark) {
+        const icon = document.getElementById('darkModeIcon');
+        const text = document.getElementById('darkModeText');
+        
+        if (icon && text) {
+            if (isDark) {
+                icon.innerHTML = '<i class="fa-solid fa-sun"></i>';
+                icon.className = 'action-icon text-warning';
+                text.innerText = 'Disable Dark Mode';
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-moon"></i>';
+                icon.className = 'action-icon text-secondary';
+                text.innerText = 'Enable Dark Mode';
+            }
+        }
+    }
+
+    // Initialize UI on page load based on current state
+    document.addEventListener('DOMContentLoaded', () => {
+        const isDark = document.documentElement.classList.contains('dark-theme');
+        updateDarkModeUI(isDark);
+    });
+</script>
 {% endblock %}

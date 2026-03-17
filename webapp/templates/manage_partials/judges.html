@@ -4,6 +4,7 @@
         <h3><i class="fa-solid fa-gavel text-secondary me-2"></i> Assigned Judges</h3>
     </div>
     
+    {% if session.user.role == 'admin' %}
     <!-- Quick Add Form -->
     <form method="POST" action="{{ url_for('events.add_judge', event_id=event.id) }}" class="quick-add-form" id="addJudgeForm" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 12px; width: 100%;">
         <select name="judge_id" class="form-select form-control-sm" style="flex: 1; min-width: 0;" required>
@@ -24,6 +25,7 @@
         
         <button type="submit" class="btn btn-primary btn-sm glass-effect" style="flex: 0 0 auto;"><i class="fa-solid fa-plus me-1"></i> Assign</button>
     </form>
+    {% endif %}
 
     <!-- Judges List -->
     <div class="admin-list-group mt-3">
@@ -36,12 +38,15 @@
                 <span class="badge bg-accent text-white" style="font-size: 0.65rem; border-radius: 4px; padding: 3px 6px;">Chairman</span>
                 {% endif %}
             </div>
+            
+            {% if session.user.role == 'admin' %}
             <div class="item-actions">
                 <button type="button" class="btn-icon-raw text-secondary" title="Edit Settings" onclick="document.getElementById('editJudgeModal_{{ assignment.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
                 <form method="POST" action="{{ url_for('events.delete_judge', event_id=event.id, assignment_id=assignment.id) }}" style="display:inline;">
                     <button type="submit" class="btn-icon-raw text-danger" title="Remove Judge" onclick="return confirm('Unassign this judge?')"><i class="fa-solid fa-trash"></i></button>
                 </form>
             </div>
+            {% endif %}
         </div>
         {% else %}
         <div class="empty-state text-center py-4">No judges assigned to this event yet.</div>
@@ -49,6 +54,7 @@
     </div>
 </div>
 
+{% if session.user.role == 'admin' %}
 <!-- JUDGES MODALS -->
 {% for assignment in event.assigned_judges %}
 <div id="editJudgeModal_{{ assignment.id }}" class="admin-modal">
@@ -114,3 +120,4 @@
         }
     });
 </script>
+{% endif %}

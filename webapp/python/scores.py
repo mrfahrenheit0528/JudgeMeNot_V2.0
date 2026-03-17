@@ -13,7 +13,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 scores_bp = Blueprint('scores', __name__, url_prefix='/admin/scores')
 
 @scores_bp.route('/')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer'])
 def index():
     db = SessionLocal()
     try:
@@ -23,7 +23,7 @@ def index():
         db.close()
 
 @scores_bp.route('/<int:event_id>')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer'])
 def detail(event_id):
     db = SessionLocal()
     try:
@@ -99,7 +99,7 @@ def detail(event_id):
         db.close()
 
 @scores_bp.route('/<int:event_id>/export/<string:target>')
-@require_role(['admin'])
+@require_role(['admin', 'admin-viewer'])
 def export(event_id, target):
     db = SessionLocal()
     try:

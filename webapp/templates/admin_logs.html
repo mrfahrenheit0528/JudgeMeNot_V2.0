@@ -4,68 +4,82 @@
 
 {% block content %}
 <div class="dashboard-container fade-in-up">
-    <header class="page-header mb-4">
+    <!-- Header -->
+    <header class="d-flex justify-content-between align-items-end mb-4">
         <div>
-            <h2><i class="fa-solid fa-shield-halved text-secondary me-2"></i> Security Logs</h2>
-            <p class="text-muted m-0">Review recent system actions and logins.</p>
+            <h2 class="fw-bold m-0" style="color: var(--text-main); letter-spacing: -0.5px;">
+                <i class="fa-solid fa-shield-halved text-secondary me-2"></i> Security Logs
+            </h2>
+            <p class="text-muted m-0 mt-1">Review recent system actions and logins.</p>
         </div>
-        <div class="header-actions">
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm bg-white shadow-sm" style="border-color: var(--panel-border); font-weight: 600;">
+                <i class="fa-solid fa-arrow-left me-1"></i> Dashboard
+            </a>
         </div>
     </header>
 
-    <div class="glass-panel" style="padding: 0; overflow: hidden; border-radius: 12px;">
-        <table class="table mb-0" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-            <thead style="background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.05);">
-                <tr>
-                    <th style="padding: 12px 20px; text-align: left; color: var(--text-muted); font-weight: 600; width: 180px;">Timestamp</th>
-                    <th style="padding: 12px 20px; text-align: left; color: var(--text-muted); font-weight: 600; width: 150px;">User</th>
-                    <th style="padding: 12px 20px; text-align: center; color: var(--text-muted); font-weight: 600; width: 100px;">Action Type</th>
-                    <th style="padding: 12px 20px; text-align: left; color: var(--text-muted); font-weight: 600;">Details</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in logs %}
-                <tr style="border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;">
-                    <td style="padding: 12px 20px; color: var(--text-muted);">
-                        <i class="fa-regular fa-clock me-1"></i> {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
-                    </td>
-                    <td style="padding: 12px 20px; font-weight: 500; color: var(--text-bright);">
-                        {% if log.user %}
-                            @{{ log.user.username }}
-                        {% else %}
-                            <span class="text-muted fst-italic">System / Deleted</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 12px 20px; text-align: center;">
-                        {% if log.action == 'LOGIN' %}
-                            <span class="badge bg-success text-white" style="font-size: 0.7rem; padding: 3px 6px;">{{ log.action }}</span>
-                        {% elif log.action == 'UPDATE' or log.action == 'EDIT' %}
-                            <span class="badge bg-primary text-white" style="font-size: 0.7rem; padding: 3px 6px;">{{ log.action }}</span>
-                        {% elif log.action == 'DELETE' %}
-                            <span class="badge bg-danger text-white" style="font-size: 0.7rem; padding: 3px 6px;">{{ log.action }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary text-white" style="font-size: 0.7rem; padding: 3px 6px;">{{ log.action }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 12px 20px; color: var(--text-muted);">
-                        {{ log.details }}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-center py-5 text-muted">
-                        <i class="fa-solid fa-folder-open fa-2x mb-2" style="opacity: 0.3;"></i>
-                        <p class="m-0">No audit logs found.</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Logs Table -->
+    <div class="glass-panel shadow-sm" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle" style="width: 100%;">
+                <thead style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                    <tr>
+                        <!-- Replaced rigid pixel widths with fluid percentages -->
+                        <th class="px-4 py-3" style="color: #64748b; font-weight: 600; width: 20%;">Timestamp</th>
+                        <th class="py-3" style="color: #64748b; font-weight: 600; width: 20%;">User</th>
+                        <th class="py-3 text-center" style="color: #64748b; font-weight: 600; width: 15%;">Action Type</th>
+                        <th class="px-4 py-3" style="color: #64748b; font-weight: 600; width: 45%;">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                        
+                        <!-- Timestamp -->
+                        <td class="px-4 py-3 text-muted" style="font-size: 0.95rem;">
+                            <i class="fa-regular fa-clock me-1"></i> {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                        </td>
+                        
+                        <!-- User -->
+                        <td class="py-3 fw-bold" style="color: #0f172a;">
+                            {% if log.user %}
+                                <i class="fa-solid fa-user-circle text-primary me-1 opacity-75"></i> @{{ log.user.username }}
+                            {% else %}
+                                <span class="text-muted fst-italic"><i class="fa-solid fa-ghost me-1 opacity-50"></i> System / Deleted</span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Action Badge -->
+                        <td class="py-3 text-center">
+                            {% if log.action == 'LOGIN' %}
+                                <span class="badge bg-success text-white px-2 py-1 shadow-sm" style="border-radius: 6px; font-weight: 700;">{{ log.action }}</span>
+                            {% elif log.action == 'UPDATE' or log.action == 'EDIT' %}
+                                <span class="badge bg-primary text-white px-2 py-1 shadow-sm" style="border-radius: 6px; font-weight: 700;">{{ log.action }}</span>
+                            {% elif log.action == 'DELETE' %}
+                                <span class="badge bg-danger text-white px-2 py-1 shadow-sm" style="border-radius: 6px; font-weight: 700;">{{ log.action }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary text-white px-2 py-1 shadow-sm" style="border-radius: 6px; font-weight: 700;">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Details -->
+                        <td class="px-4 py-3 text-muted" style="font-size: 0.95rem;">
+                            {{ log.details }}
+                        </td>
+                        
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-shield-halved fa-2x mb-2" style="opacity: 0.3;"></i>
+                            <p class="m-0">No audit logs found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
-
-<style>
-    tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
-</style>
 {% endblock %}

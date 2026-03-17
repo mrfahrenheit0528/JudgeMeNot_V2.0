@@ -1,0 +1,219 @@
+/* webapp/static/css/dark-mode.css */
+
+html.dark-theme {
+    /* Theme Core Variables */
+    --bg-color: #0f172a;       
+    --panel-bg: #1e293b;       
+    --panel-border: #334155;   
+    --text-main: #f8fafc;      
+    --text-muted: #94a3b8;     
+    --primary-color: #3b82f6; 
+
+    /* Legacy style.css Variables Override */
+    --bg-dark: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-surface-elevated: #334155;
+    --text-primary: #cbd5e1;
+    --text-bright: #f8fafc;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ==========================================================
+   AGGRESSIVE DARK MODE OVERRIDES
+   These rules hunt down inline hardcoded styles and nuke them
+========================================================== */
+
+/* 1. Nuke hardcoded inline backgrounds */
+html.dark-theme [style*="background: white"],
+html.dark-theme [style*="background: #ffffff"],
+html.dark-theme [style*="background:#fff"],
+html.dark-theme [style*="background: #fff"],
+html.dark-theme [style*="background: #f8fafc"] {
+    background-color: var(--panel-bg) !important;
+}
+
+/* 2. Nuke hardcoded inline text colors */
+html.dark-theme [style*="color: #1e293b"],
+html.dark-theme [style*="color: #0f172a"],
+html.dark-theme [style*="color: #333"],
+html.dark-theme [style*="color: #111"],
+html.dark-theme [style*="color: #000"] {
+    color: var(--text-main) !important;
+}
+
+html.dark-theme [style*="color: #64748b"],
+html.dark-theme [style*="color: #475569"],
+html.dark-theme [style*="color: #888"] {
+    color: var(--text-muted) !important;
+}
+
+/* 3. Global Backgrounds for UI Elements */
+html.dark-theme body,
+html.dark-theme .dashboard-container {
+    background-color: var(--bg-color) !important;
+}
+
+html.dark-theme .glass-panel,
+html.dark-theme .admin-card,
+html.dark-theme .stat-card,
+html.dark-theme .action-card,
+html.dark-theme .bento-box,
+html.dark-theme .contestant-card,
+html.dark-theme .segment-row,
+html.dark-theme .team-row,
+html.dark-theme .pb-modal-content,
+html.dark-theme .waiting-card,
+html.dark-theme .criteria-list,
+html.dark-theme .file-drop-area,
+html.dark-theme .event-item {
+    background-color: var(--panel-bg) !important;
+    border-color: var(--panel-border) !important;
+}
+
+/* 4. Text & Typography Overrides */
+html.dark-theme h1, html.dark-theme h2, html.dark-theme h3,
+html.dark-theme h4, html.dark-theme h5, html.dark-theme h6,
+html.dark-theme strong, html.dark-theme b,
+html.dark-theme .text-main, html.dark-theme .text-bright,
+html.dark-theme .candidate-name, html.dark-theme .event-title,
+html.dark-theme .crit-name {
+    color: var(--text-main) !important;
+}
+
+html.dark-theme p, html.dark-theme span, html.dark-theme td, html.dark-theme div {
+    color: var(--text-main);
+}
+
+html.dark-theme .text-muted, 
+html.dark-theme small,
+html.dark-theme .crit-meta {
+    color: var(--text-muted) !important;
+}
+
+/* 5. Forms, Inputs, and Dropdowns (Fixes the white input boxes) */
+html.dark-theme .form-control,
+html.dark-theme .form-select,
+html.dark-theme input[type="text"],
+html.dark-theme input[type="number"],
+html.dark-theme input[type="password"] {
+    background-color: var(--bg-color) !important;
+    border-color: var(--panel-border) !important;
+    color: var(--text-main) !important;
+}
+
+html.dark-theme .form-control:focus,
+html.dark-theme .form-select:focus {
+    background-color: var(--panel-bg) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+html.dark-theme ::placeholder {
+    color: #64748b !important;
+    opacity: 1 !important;
+}
+
+/* Custom Input Checkboxes */
+html.dark-theme .form-check-input {
+    background-color: var(--bg-color);
+    border-color: var(--panel-border);
+}
+
+/* 6. Tables */
+html.dark-theme thead,
+html.dark-theme thead th,
+html.dark-theme thead tr {
+    background-color: var(--bg-surface-elevated) !important;
+    border-color: var(--panel-border) !important;
+    color: var(--text-muted) !important;
+}
+
+html.dark-theme .table td,
+html.dark-theme .table th,
+html.dark-theme tr {
+    border-color: var(--panel-border) !important;
+}
+
+/* Overrides the javascript onmouseover highlight */
+html.dark-theme tr[onmouseover]:hover {
+    background-color: var(--bg-surface-elevated) !important;
+}
+
+/* 7. Buttons & Utilities */
+html.dark-theme .btn-outline-secondary,
+html.dark-theme .btn-light {
+    background-color: transparent !important;
+    border-color: var(--panel-border) !important;
+    color: var(--text-muted) !important;
+}
+
+html.dark-theme .btn-outline-secondary:hover,
+html.dark-theme .btn-light:hover {
+    background-color: var(--bg-surface-elevated) !important;
+    color: var(--text-main) !important;
+    border-color: var(--text-muted) !important;
+}
+
+html.dark-theme .btn-outline-primary.bg-white {
+    background-color: transparent !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
+
+html.dark-theme .btn-outline-primary.bg-white:hover {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Light/White Badges Fix */
+html.dark-theme .badge.bg-light,
+html.dark-theme .bg-white {
+    background-color: var(--bg-surface-elevated) !important;
+    color: var(--text-main) !important;
+    border-color: var(--panel-border) !important;
+}
+
+/* 8. Component Specific Fixes (Pageant & Quiz Bee Cards) */
+html.dark-theme .admin-card-header {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-bottom-color: var(--panel-border) !important;
+}
+
+html.dark-theme .btn-icon {
+    background-color: var(--bg-color) !important;
+    border-color: var(--panel-border) !important;
+}
+
+html.dark-theme .btn-icon:hover {
+    background-color: var(--bg-surface-elevated) !important;
+}
+
+html.dark-theme .avatar-sm.placeholder {
+    background-color: var(--bg-surface-elevated) !important;
+    border-color: var(--panel-border) !important;
+    color: var(--text-muted) !important;
+}
+
+html.dark-theme .q-bubble {
+    background-color: var(--bg-surface-elevated) !important;
+    border-color: var(--panel-border) !important;
+    color: var(--text-main) !important;
+}
+
+html.dark-theme .pb-radio-label.wrong-btn {
+    background-color: var(--bg-surface-elevated) !important;
+    border-color: var(--panel-border) !important;
+    color: var(--text-muted) !important;
+}
+
+html.dark-theme .pb-radio-label.wrong-btn:hover {
+    background-color: #475569 !important;
+    color: var(--text-main) !important;
+}
+
+/* Modals Overlay Base */
+html.dark-theme .admin-modal .glass-panel,
+html.dark-theme .modal-backdrop .glass-panel {
+    background-color: var(--panel-bg) !important;
+    border-color: var(--panel-border) !important;
+}
