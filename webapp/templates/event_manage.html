@@ -141,6 +141,12 @@
                 window.location.href = sessionStorage.getItem('smartBackUrl') || fallbackUrl;
             });
         }
+
+        // --- FIX MODAL STACKING CONTEXT ---
+        // Move all modals to the body so they aren't constrained by the fade-in-up animation's stacking context
+        document.querySelectorAll('.admin-modal, .pb-modal').forEach(modal => {
+            document.body.appendChild(modal);
+        });
     });
 
     // FIXED: Global Toast generator for all included partials

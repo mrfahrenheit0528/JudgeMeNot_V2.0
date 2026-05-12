@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
-from webapp.python.auth import require_role, hash_password
+from webapp.python.auth import require_role, hash_password, log_audit_action
+from flask import session
 from webapp.python.database import SessionLocal
 from webapp.python.models import Event, User, AuditLog
 import datetime
@@ -58,6 +59,7 @@ def add_user():
         new_user = User(username=username, name=name, password_hash=hashed_pw, role=role)
         db.add(new_user)
         db.commit()
+        log_audit_action(session['user']['id'], "CREATE_USER", f"Created user '{username}' with role '{role}'")
         flash(f"User account '{username}' created successfully.", "success")
     except Exception as e:
         flash(f"Error creating user: {str(e)}", "error")
@@ -96,6 +98,7 @@ def edit_user(user_id):
             user.password_hash = hash_password(password)
             
         db.commit()
+        log_audit_action(session['user']['id'], "EDIT_USER", f"Edited user '{username}' (ID: {user_id})")
         flash(f"User '{username}' updated successfully.", "success")
     except Exception as e:
         flash(f"Error updating user: {str(e)}", "error")
@@ -116,6 +119,7 @@ def delete_user(user_id):
             else:
                 db.delete(user)
                 db.commit()
+                log_audit_action(session['user']['id'], "DELETE_USER", f"Deleted user '{user.username}' (ID: {user_id})")
                 flash("User deleted successfully.", "success")
         else:
             flash("User not found.", "error")

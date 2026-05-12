@@ -152,7 +152,10 @@ def create_app(test_config=None):
         db = SessionLocal()
         try:
             from webapp.python.models import Event
-            latest_event = db.query(Event).order_by(Event.id.desc()).first()
+            latest_event = db.query(Event).order_by(
+                (Event.status == 'Ongoing').desc(),
+                Event.last_active.desc()
+            ).first()
             if latest_event:
                 return redirect(url_for('events.manage', event_id=latest_event.id))
             else:

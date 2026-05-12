@@ -1,0 +1,91 @@
+/* ==============================
+   FULL-PAGE BACKDROP (LIGHT/DARK)
+============================== */
+.system-universe {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 40%, #e8ecf4 100%);
+    overflow: hidden;
+    transition: background 0.5s ease;
+}
+
+#particleCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Aurora - Light */
+.aurora {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.18;
+    z-index: 0;
+    animation: auroraPulse 5s ease-in-out infinite alternate;
+}
+
+.aurora-1 {
+    width: 400px;
+    height: 400px;
+    background: #93c5fd;
+    top: -100px;
+    left: -100px;
+}
+
+.aurora-2 {
+    width: 350px;
+    height: 350px;
+    background: #c4b5fd;
+    bottom: -80px;
+    right: -80px;
+    animation-delay: 2s;
+}
+
+.aurora-3 {
+    width: 300px;
+    height: 300px;
+    background: #67e8f9;
+    top: 40%;
+    left: 55%;
+    transform: translate(-50%, -50%);
+    animation-delay: 4s;
+}
+
+@keyframes auroraPulse {
+    0% {
+        transform: scale(1) translate(0, 0);
+        opacity: 0.15;
+    }
+    50% {
+        transform: scale(1.2) translate(15px, -15px);
+        opacity: 0.3;
+    }
+    100% {
+        transform: scale(1) translate(0, 0);
+        opacity: 0.15;
+    }
+}
+
+/* Aurora - Dark override */
+html.dark-theme .system-universe {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+
+html.dark-theme .aurora-1 {
+    background: #3b82f6;
+    opacity: 0.2;
+}
+
+html.dark-theme .aurora-2 {
+    background: #8b5cf6;
+    opacity: 0.2;
+}
+
+html.dark-theme .aurora-3 {
+    background: #06b6d4;
+    opacity: 0.2;
+}

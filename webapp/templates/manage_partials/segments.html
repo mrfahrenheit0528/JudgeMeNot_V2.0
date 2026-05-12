@@ -93,7 +93,7 @@
                         {% if session.user.role == 'admin' %}
                         <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editCriteriaModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen" style="font-size: 0.8rem;"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_criteria', event_id=event.id, criteria_id=c.id) }}" style="display:inline;">
-                            <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove this criteria?')"><i class="fa-solid fa-xmark"></i></button>
+                            <button type="button" class="btn-icon-raw text-danger" onclick="event.preventDefault(); showStandardConfirm('Remove this criteria?', () => this.closest('form').submit());"><i class="fa-solid fa-xmark"></i></button>
                         </form>
                         {% endif %}
                     </div>

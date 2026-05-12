@@ -25,9 +25,12 @@ html.dark-theme {
 
 /* 1. Nuke hardcoded inline backgrounds */
 html.dark-theme [style*="background: white"],
+html.dark-theme [style*="background-color: white"],
 html.dark-theme [style*="background: #ffffff"],
+html.dark-theme [style*="background-color: #ffffff"],
 html.dark-theme [style*="background:#fff"],
 html.dark-theme [style*="background: #fff"],
+html.dark-theme [style*="background-color: #fff"],
 html.dark-theme [style*="background: #f8fafc"] {
     background-color: var(--panel-bg) !important;
 }
@@ -48,10 +51,7 @@ html.dark-theme [style*="color: #888"] {
 }
 
 /* 3. Global Backgrounds for UI Elements */
-html.dark-theme body,
-html.dark-theme .dashboard-container {
-    background-color: var(--bg-color) !important;
-}
+/* body and .dashboard-container are now transparent to show .system-universe */
 
 html.dark-theme .glass-panel,
 html.dark-theme .admin-card,
@@ -121,6 +121,12 @@ html.dark-theme .form-check-input {
 }
 
 /* 6. Tables */
+html.dark-theme .table {
+    --bs-table-bg: transparent !important;
+    --bs-table-color: var(--text-main) !important;
+    color: var(--text-main) !important;
+}
+
 html.dark-theme thead,
 html.dark-theme thead th,
 html.dark-theme thead tr {
@@ -132,7 +138,14 @@ html.dark-theme thead tr {
 html.dark-theme .table td,
 html.dark-theme .table th,
 html.dark-theme tr {
+    background-color: transparent !important;
     border-color: var(--panel-border) !important;
+    color: var(--text-main) !important;
+}
+
+html.dark-theme .table tbody tr[style*="background:"] {
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 /* Overrides the javascript onmouseover highlight */
@@ -141,6 +154,17 @@ html.dark-theme tr[onmouseover]:hover {
 }
 
 /* 7. Buttons & Utilities */
+html.dark-theme .fake-btn {
+    background-color: var(--bg-surface-elevated);
+    border-color: var(--panel-border);
+    color: var(--text-bright);
+}
+
+html.dark-theme .file-drop-area {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
 html.dark-theme .btn-outline-secondary,
 html.dark-theme .btn-light {
     background-color: transparent !important;

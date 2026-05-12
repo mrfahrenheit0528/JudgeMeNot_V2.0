@@ -6,14 +6,14 @@
 <div class="dashboard-container fade-in-up" style="max-width: 800px; margin: 0 auto; padding-top: 20px; padding-bottom: 60px;">
     
     <!-- Dynamic Header (Bulletproof Alignment & Spacing) -->
-    <header class="shadow-sm" style="background: white; border-radius: 12px; border-left: 6px solid var(--primary); display: flex; justify-content: space-between; align-items: center; padding: 25px 30px; margin-bottom: 35px; flex-wrap: wrap; gap: 20px; overflow: hidden;">
+    <header class="shadow-sm" style="background: white; border-radius: 12px; border-left: 6px solid var(--primary-color); display: flex; justify-content: space-between; align-items: center; padding: 25px 30px; margin-bottom: 35px; flex-wrap: wrap; gap: 20px; overflow: hidden;">
         
         <!-- Left Side: Title and Badges -->
         <div style="display: flex; flex-direction: column; gap: 12px;">
             <h2 style="margin: 0; font-weight: 800; color: #0f172a; font-size: 1.8rem; letter-spacing: -0.5px;">{{ contestant.name }}</h2>
             
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                <span style="background: rgba(59, 130, 246, 0.1); color: var(--primary); border: 1px solid rgba(59, 130, 246, 0.2); padding: 6px 14px; border-radius: 8px; font-size: 0.9rem; font-weight: 700;">
+                <span style="background: rgba(59, 130, 246, 0.1); color: var(--primary-color); border: 1px solid rgba(59, 130, 246, 0.2); padding: 6px 14px; border-radius: 8px; font-size: 0.9rem; font-weight: 700;">
                     <i class="fa-solid fa-layer-group me-1"></i> {{ segment.name }}
                 </span>
                 <span style="background: #f8fafc; color: #475569; padding: 6px 14px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; border: 1px solid #e2e8f0;">
@@ -120,15 +120,15 @@
     /* Correct Button (Blue Theme) */
     .pb-radio-label.correct-btn {
         background: rgba(59, 130, 246, 0.08) !important;
-        color: var(--primary) !important;
+        color: var(--primary-color) !important;
         border-color: rgba(59, 130, 246, 0.2) !important;
         border-radius: 6px 0 0 6px !important; 
     }
     .pb-radio-label.correct-btn:hover { background: rgba(59, 130, 246, 0.15) !important; }
     .pb-radio-input:checked + .pb-radio-label.correct-btn {
-        background: var(--primary) !important;
+        background: var(--primary-color) !important;
         color: white !important;
-        border-color: var(--primary) !important;
+        border-color: var(--primary-color) !important;
         box-shadow: inset 0 2px 4px rgba(0,0,0,0.15) !important;
         position: relative !important;
         z-index: 2 !important;
@@ -192,7 +192,7 @@
             
             if (state === 'saving') {
                 badge.style.background = 'rgba(59, 130, 246, 0.1)';
-                badge.style.color = 'var(--primary)';
+                badge.style.color = 'var(--primary-color)';
                 badge.style.borderColor = 'rgba(59, 130, 246, 0.2)';
                 badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Saving...';
             } else if (state === 'saved') {

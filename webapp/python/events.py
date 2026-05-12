@@ -1,10 +1,12 @@
 import os
 import uuid
+import datetime
 from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, current_app
 from werkzeug.utils import secure_filename
 from webapp.python.database import SessionLocal
 from webapp.python.models import Event, Segment, Criteria, Contestant, User, EventJudge, Score, JudgeProgress
-from webapp.python.auth import require_role, hash_password
+from webapp.python.auth import require_role, hash_password, log_audit_action
+from flask import session
 from webapp.python.services import get_live_leaderboard
 
 events_bp = Blueprint('events', __name__, url_prefix='/events')
@@ -22,6 +24,7 @@ def create():
             new_event = Event(name=name, event_type=event_type, status='Setup', category_count=category_count)
             db.add(new_event)
             db.commit()
+            log_audit_action(session['user']['id'], 'CREATE_EVENT', f'Created new event "{name}"')
             flash(f'Event "{name}" created successfully!', 'success')
             return redirect(url_for('events.manage', event_id=new_event.id))
         except Exception as e:
@@ -99,8 +102,14 @@ def launch(event_id):
                 flash(f'Event {event.name} has been paused.', 'warning')
             else:
                 event.status = 'Ongoing'
+                event.last_active = datetime.datetime.now()
                 flash(f'Event {event.name} is now LIVE!', 'success')
             db.commit()
+            
+        referrer = request.referrer
+        if referrer and 'manage' not in referrer:
+            return redirect(referrer)
+            
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
         db.close()
@@ -168,6 +177,7 @@ def add_segment(event_id):
         )
         db.add(new_segment)
         db.commit()
+        log_audit_action(session['user']['id'], 'CREATE_SEGMENT', f'Created segment {name} in event {event_id}')
         flash('Segment added successfully!', 'success')
         return redirect(url_for('events.manage', event_id=event.id))
     finally:
@@ -194,6 +204,7 @@ def edit_segment(event_id, segment_id):
                 segment.qualifying_count = 0
                 
             db.commit()
+            log_audit_action(session['user']['id'], 'EDIT_SEGMENT', f'Edited segment {segment.name} (ID: {segment_id}) in event {event_id}')
             flash('Segment updated successfully!', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -208,6 +219,7 @@ def delete_segment(event_id, segment_id):
         if segment:
             db.delete(segment)
             db.commit()
+            log_audit_action(session['user']['id'], 'DELETE_SEGMENT', f'Deleted segment {segment.name} (ID: {segment_id}) in event {event_id}')
             flash('Segment deleted.', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -228,6 +240,7 @@ def add_criteria(event_id, segment_id):
         new_criteria = Criteria(segment_id=segment_id, name=name, weight=weight, max_score=max_score)
         db.add(new_criteria)
         db.commit()
+        log_audit_action(session['user']['id'], 'CREATE_CRITERIA', f'Created criteria {name} for segment {segment_id} in event {event_id}')
         flash('Criteria added!', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -244,6 +257,7 @@ def edit_criteria(event_id, criteria_id):
             crit.weight = float(request.form.get('weight')) / 100.0
             crit.max_score = int(request.form.get('max_score'))
             db.commit()
+            log_audit_action(session['user']['id'], 'EDIT_CRITERIA', f'Edited criteria {crit.name} (ID: {criteria_id}) in event {event_id}')
             flash('Criteria updated!', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -258,6 +272,7 @@ def delete_criteria(event_id, criteria_id):
         if crit:
             db.delete(crit)
             db.commit()
+            log_audit_action(session['user']['id'], 'DELETE_CRITERIA', f'Deleted criteria {crit.name} (ID: {criteria_id}) in event {event_id}')
             flash('Criteria deleted.', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -291,6 +306,7 @@ def add_contestant(event_id):
         )
         db.add(new_contestant)
         db.commit()
+        log_audit_action(session['user']['id'], 'CREATE_CONTESTANT', f'Added contestant {name} to event {event_id}')
         flash('Contestant added!', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -317,6 +333,7 @@ def edit_contestant(event_id, contestant_id):
                 contestant.image_path = f"uploads/contestants/{filename}"
                 
             db.commit()
+            log_audit_action(session['user']['id'], 'EDIT_CONTESTANT', f'Edited contestant {contestant.name} (ID: {contestant_id}) in event {event_id}')
             flash('Contestant updated!', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -331,6 +348,7 @@ def delete_contestant(event_id, contestant_id):
         if contestant:
             db.delete(contestant)
             db.commit()
+            log_audit_action(session['user']['id'], 'DELETE_CONTESTANT', f'Deleted contestant {contestant.name} (ID: {contestant_id}) in event {event_id}')
             flash('Contestant removed.', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -350,6 +368,7 @@ def add_judge(event_id):
         new_assignment = EventJudge(event_id=event_id, judge_id=judge_id, is_chairman=is_chairman)
         db.add(new_assignment)
         db.commit()
+        log_audit_action(session['user']['id'], 'CREATE_JUDGE', f'Assigned judge (ID: {judge_id}) to event {event_id}')
         flash('Judge assigned successfully!', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -364,6 +383,7 @@ def edit_judge(event_id, assignment_id):
         if assignment:
             assignment.is_chairman = request.form.get('is_chairman') == 'on'
             db.commit()
+            log_audit_action(session['user']['id'], 'EDIT_JUDGE', f'Edited judge assignment (ID: {assignment_id}) in event {event_id}')
             flash('Judge settings updated!', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -378,6 +398,7 @@ def delete_judge(event_id, assignment_id):
         if assignment:
             db.delete(assignment)
             db.commit()
+            log_audit_action(session['user']['id'], 'DELETE_JUDGE', f'Deleted judge assignment (ID: {assignment_id}) in event {event_id}')
             flash('Judge removed from event.', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -404,7 +425,7 @@ def quick_create_judge(event_id):
         new_assignment = EventJudge(event_id=event_id, judge_id=new_user.id, is_chairman=False)
         db.add(new_assignment)
         db.commit()
-        
+        log_audit_action(session['user']['id'], 'CREATE_USER', f"Quick created and assigned judge '{name}' (Username: {username})")
         flash(f"Judge '{name}' created and assigned!", "success")
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -685,6 +706,7 @@ def pb_add_question(segment_id):
         segment = db.query(Segment).filter(Segment.id == segment_id).first()
         segment.total_questions += 1
         db.commit()
+        log_audit_action(session['user']['id'], 'CREATE_QUESTION', f'Added a Sudden Death question to segment {segment.name} (ID: {segment_id})')
         flash(f'+1 Question added to {segment.name}!', 'success')
         return redirect(url_for('events.manage', event_id=segment.event_id))
     finally:
@@ -706,6 +728,7 @@ def pb_add_segment(event_id):
         )
         db.add(new_segment)
         db.commit()
+        log_audit_action(session['user']['id'], 'CREATE_SEGMENT', f"Created Quiz Bee Segment {request.form.get('name')} in event {event_id}")
         flash('Quiz Bee Segment Added.', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -725,6 +748,7 @@ def pb_add_contestant(event_id):
         )
         db.add(new_contestant)
         db.commit()
+        log_audit_action(session['user']['id'], 'CREATE_CONTESTANT', f"Added team {request.form.get('name')} to event {event_id}")
         flash('Team & Tabulator Linked.', 'success')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
@@ -744,6 +768,7 @@ def pb_edit_segment(event_id, segment_id):
             segment.qualifying_count = int(request.form.get('qualifying_count') or 0)
             segment.is_final = request.form.get('is_final') == 'on'
             db.commit()
+            log_audit_action(session['user']['id'], 'EDIT_SEGMENT', f'Edited segment {segment.name} (ID: {segment_id}) in event {event_id}')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
         db.close()
@@ -759,6 +784,7 @@ def pb_edit_contestant(event_id, contestant_id):
             contestant.name = request.form.get('name')
             contestant.assigned_judge_id = request.form.get('assigned_judge_id')
             db.commit()
+            log_audit_action(session['user']['id'], 'EDIT_CONTESTANT', f'Edited contestant {contestant.name} (ID: {contestant_id}) in event {event_id}')
         return redirect(url_for('events.manage', event_id=event_id))
     finally:
         db.close()

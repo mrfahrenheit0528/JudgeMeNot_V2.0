@@ -259,7 +259,7 @@ def calculate_rankings(db: Session, event_id: int):
 
     for c in contestants:
         total_score = 0
-        if event.event_type == 'PAGEANT':
+        if event.event_type == 'Score-Based':
             scores = db.query(Score).filter(Score.contestant_id == c.id).all()
             for s in scores:
                 if s.criteria:
@@ -287,25 +287,31 @@ def calculate_dashboard_progress(db: Session, active_events, recent_events):
     event_progress = {}
     total_actual = 0
     total_expected = 0
-    unique_events = {e.id: e for e in (active_events + recent_events)}.values()
+    
+    all_events = db.query(Event).all()
+    unique_events_ids = set(e.id for e in (active_events + recent_events))
 
-    for event in unique_events:
+    for event in all_events:
         judge_count = db.query(EventJudge).filter(EventJudge.event_id == event.id).count()
         contestant_count = db.query(Contestant).filter(Contestant.event_id == event.id, Contestant.status == 'Active').count()
         
-        if event.event_type == 'PAGEANT':
+        if event.event_type == 'Score-Based':
             criteria_count = db.query(Criteria).join(Segment).filter(Segment.event_id == event.id).count()
             expected = judge_count * contestant_count * criteria_count
         else:
-            seg = db.query(Segment).filter(Segment.event_id == event.id).first()
-            total_q = seg.total_questions if seg else 0
-            expected = judge_count * contestant_count * total_q
+            total_q = db.query(func.sum(Segment.total_questions)).filter(Segment.event_id == event.id).scalar() or 0
+            expected = contestant_count * total_q
 
         actual = db.query(Score).join(Contestant).filter(Contestant.event_id == event.id).count()
-        pct = (actual / expected * 100) if expected > 0 else 0
-        event_progress[event.id] = round(min(pct, 100), 1)
         
-        total_actual += actual
+        # Cap actual at expected to prevent percentages > 100% due to data anomalies
+        capped_actual = min(actual, expected) if expected > 0 else 0
+        
+        if event.id in unique_events_ids:
+            pct = (capped_actual / expected * 100) if expected > 0 else 0
+            event_progress[event.id] = round(min(pct, 100), 1)
+        
+        total_actual += capped_actual
         total_expected += expected
 
     global_pct = (total_actual / total_expected * 100) if total_expected > 0 else 0

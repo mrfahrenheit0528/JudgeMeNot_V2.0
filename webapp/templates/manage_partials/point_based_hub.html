@@ -36,7 +36,7 @@
                         {% if session.user.role == 'admin' %}
                         {% if round.is_active and ('Tie Breaker' in round.name or 'Clincher' in round.name) %}
                         <form method="POST" action="{{ url_for('events.pb_add_question', segment_id=round.id) }}" class="mt-2 ajax-form">
-                            <button type="submit" class="btn btn-sm btn-light py-1 px-3" style="font-size: 0.75rem; border-radius: 6px; font-weight: 700;" onclick="return confirm('Add an extra Sudden Death question to this round?');"><i class="fa-solid fa-plus me-1"></i> 1 Question</button>
+                            <button type="button" class="btn btn-sm btn-light py-1 px-3" style="font-size: 0.75rem; border-radius: 6px; font-weight: 700;" onclick="event.preventDefault(); showStandardConfirm('Add an extra Sudden Death question to this round?', () => this.closest('form').submit());"><i class="fa-solid fa-plus me-1"></i> 1 Question</button>
                         </form>
                         {% endif %}
                         {% endif %}
@@ -164,7 +164,7 @@
                     <div style="display: flex; gap: 5px;">
                         <button type="button" class="btn btn-outline-primary btn-sm" style="border: none;" onclick="openEditSegment({{ seg.id }}, {{ seg.order_index }}, '{{ seg.name | replace('\'', '\\\'') }}', {{ seg.points_per_question }}, {{ seg.total_questions }}, {{ seg.qualifying_count }}, '{{ seg.is_final }}')"><i class="fa-solid fa-pen"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_segment', event_id=event.id, segment_id=seg.id) }}" class="ajax-form d-inline">
-                            <button type="submit" class="btn btn-outline-danger btn-sm" style="border: none;" onclick="return confirm('Are you sure you want to completely delete this round?')"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" style="border: none;" onclick="event.preventDefault(); showStandardConfirm('Are you sure you want to completely delete this round?', () => this.closest('form').submit());"><i class="fa-solid fa-trash"></i></button>
                         </form>
                     </div>
                     {% endif %}
@@ -213,7 +213,7 @@
                     <div style="display: flex; gap: 5px;">
                         <button type="button" class="btn btn-outline-success btn-sm" style="border: none;" onclick="openEditContestant({{ c.id }}, '{{ c.candidate_number }}', '{{ c.name | replace('\'', '\\\'') }}', {{ c.assigned_judge_id }})"><i class="fa-solid fa-pen"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" class="ajax-form d-inline">
-                            <button type="submit" class="btn btn-outline-danger btn-sm" style="border: none;" onclick="return confirm('Remove this Team and their assigned Tabulator?')"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" style="border: none;" onclick="event.preventDefault(); showStandardConfirm('Remove this Team and their assigned Tabulator?', () => this.closest('form').submit());"><i class="fa-solid fa-trash"></i></button>
                         </form>
                     </div>
                     {% endif %}
@@ -300,33 +300,31 @@
 
     // Strict validation handlers
     window.confirmStartRound = function(e) {
-        if(!confirm('LAUNCH ROUND: Are you sure you want to start this round?\n\nAll Tabulators will instantly receive the scoring sheet.')) { e.preventDefault(); return false; }
-        return true;
+        e.preventDefault();
+        showStandardConfirm('LAUNCH ROUND: Are you sure you want to start this round?\n\nAll Tabulators will instantly receive the scoring sheet.', () => e.target.closest('form').submit());
+        return false;
     };
     
     window.confirmStopRound = function(e) {
+        e.preventDefault();
         if (!window.pbAllFinished) {
-            e.preventDefault();
             if (typeof window.showToast === 'function') window.showToast('error', 'ACTION BLOCKED: Tabulators must reach 100% progress before you can pause/evaluate.');
             else alert('ACTION BLOCKED: Tabulators must reach 100% progress before you can pause/evaluate.');
             return false;
         }
-        if(!confirm('PAUSE ROUND: Are you sure you want to pause this round?')) { e.preventDefault(); return false; }
-        return true;
+        showStandardConfirm('PAUSE ROUND: Are you sure you want to pause this round?', () => e.target.closest('form').submit());
+        return false;
     };
 
     window.confirmEvaluateRound = function(e) {
+        e.preventDefault();
         if (!window.pbAllFinished) {
-            e.preventDefault();
             if (typeof window.showToast === 'function') window.showToast('error', 'ACTION BLOCKED: Tabulators must reach 100% progress to evaluate.');
             else alert('ACTION BLOCKED: Tabulators must reach 100% progress to evaluate.');
             return false;
         }
-        if(!confirm('EVALUATE ROUND: Are you sure you want to run the engine now?\n\nThis will finalize the ranks for this round and close it permanently.')) { 
-            e.preventDefault(); 
-            return false; 
-        }
-        return true;
+        showStandardConfirm('EVALUATE ROUND: Are you sure you want to run the engine now?\n\nThis will finalize the ranks for this round and close it permanently.', () => e.target.closest('form').submit());
+        return false;
     };
 
     window.openEditSegment = function(id, order, name, pts, q, top, is_final) {

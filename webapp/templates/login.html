@@ -3,201 +3,588 @@
 
 {% block extra_css %}
 <style>
-    /* Ensure the body expands to fill height for the split screen */
     body {
         display: flex;
         flex-direction: column;
     }
-    
-    /* The main layout wrapper */
-    .split-layout {
-        min-height: calc(100vh - 120px);
-    }
-    
-    /* Right Side Login Panel Styling */
-    .login-panel {
-        padding: 3.5rem 3rem;
-        border-radius: 24px;
-        transition: all 0.3s ease;
-    }
-    
-    .input-group-text {
-        background: transparent;
-        border-right: none;
-        color: var(--text-muted);
-    }
-    .form-control {
-        border-left: none;
-    }
-    
-    /* Form Focus Glow Effects */
-    .input-group:focus-within {
-        box-shadow: 0 0 0 4px var(--accent-light);
-        border-radius: 8px;
-    }
-    .input-group:focus-within .input-group-text,
-    .input-group:focus-within .form-control {
-        border-color: var(--primary-color);
-        color: var(--text-main);
-    }
-    
-    /* Auto-adapts Focus Ring for Dark Theme */
-    html.dark-theme .input-group:focus-within {
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    }
-    html.dark-theme .input-group:focus-within .input-group-text,
-    html.dark-theme .input-group:focus-within .form-control {
-        border-color: var(--primary-color);
+
+
+
+    .login-content-layer {
+        position: relative;
+        z-index: 2;
+        min-height: auto;
+        display: flex;
+        align-items: center;
     }
 
-    /* Left Side Info Styling */
-    .hero-section {
-        padding-right: 4rem;
+    /* ==============================
+       LEFT: ABOUT PANEL
+    ============================== */
+    .about-content {
+        padding: 2rem 1rem 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
     }
 
-    /* Team Cards Styling */
-    .team-card {
+    .reveal {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: revealUp 0.6s ease forwards;
+    }
+
+    .reveal-d1 {
+        animation-delay: 0.1s;
+    }
+
+    .reveal-d2 {
+        animation-delay: 0.25s;
+    }
+
+    .reveal-d3 {
+        animation-delay: 0.4s;
+    }
+
+    .reveal-d4 {
+        animation-delay: 0.55s;
+    }
+
+    .reveal-d5 {
+        animation-delay: 0.7s;
+    }
+
+    @keyframes revealUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .gradient-text {
+        background: linear-gradient(90deg, #3b82f6, #7c3aed, #0ea5e9);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: gradientShift 4s linear infinite;
+    }
+
+    @keyframes gradientShift {
+        to {
+            background-position: 200% center;
+        }
+    }
+
+    .about-brand-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 1.5rem;
+    }
+
+    .about-icon-box {
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
         border-radius: 16px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        padding: 1.5rem !important;
-    }
-    
-    .team-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-md);
-        border-color: var(--primary-color) !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        color: white;
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+        animation: iconFloat 3s ease-in-out infinite;
+        flex-shrink: 0;
     }
 
-    .team-avatar {
-        width: 100px;
-        height: 100px;
+    @keyframes iconFloat {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-6px);
+        }
+    }
+
+    /* Light text colors */
+    .about-brand-row h2 {
+        margin: 0;
+        font-weight: 800;
+        font-size: 1.7rem;
+    }
+
+    .about-brand-row small {
+        color: #64748b;
+        font-size: 0.85rem;
+    }
+
+    .about-mission {
+        color: #475569;
+        line-height: 1.8;
+        font-size: 0.95rem;
+        text-align: justify;
+        margin-bottom: 2rem;
+    }
+
+    /* Dark text overrides */
+    html.dark-theme .about-brand-row small {
+        color: #94a3b8;
+    }
+
+    html.dark-theme .about-mission {
+        color: #cbd5e1;
+    }
+
+    /* Stats */
+    .stat-row {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 2rem;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-num {
+        font-size: 1.8rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #3b82f6, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+
+    html.dark-theme .stat-label {
+        color: #94a3b8;
+    }
+
+    /* Features */
+    .feat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 2rem;
+    }
+
+    .feat-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: rgba(59, 130, 246, 0.06);
+        border: 1px solid rgba(59, 130, 246, 0.12);
+        backdrop-filter: blur(6px);
+        transition: all 0.25s ease;
+        cursor: default;
+    }
+
+    .feat-card:hover {
+        background: rgba(59, 130, 246, 0.12);
+        border-color: rgba(99, 102, 241, 0.35);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 18px rgba(99, 102, 241, 0.1);
+    }
+
+    .feat-card i {
+        color: #3b82f6;
+        font-size: 1.1rem;
+        width: 22px;
+        text-align: center;
+    }
+
+    .feat-card span {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #1e293b;
+    }
+
+    html.dark-theme .feat-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    html.dark-theme .feat-card:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(99, 102, 241, 0.4);
+        box-shadow: 0 6px 18px rgba(99, 102, 241, 0.15);
+    }
+
+    html.dark-theme .feat-card i {
+        color: #60a5fa;
+    }
+
+    html.dark-theme .feat-card span {
+        color: #e2e8f0;
+    }
+
+    /* Team */
+    .team-label {
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-weight: 700;
+        font-size: 0.7rem;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    .login-team-row {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .team-chip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-radius: 10px;
+        background: rgba(59, 130, 246, 0.06);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        transition: all 0.2s ease;
+    }
+
+    .team-chip:hover {
+        background: rgba(59, 130, 246, 0.12);
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+    }
+
+    .team-chip img {
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         object-fit: cover;
-        border: 3px solid #58a6ff; /* Light blue border to match your design */
-        margin-bottom: 1rem;
-        background: var(--panel-bg);
+        border: 2px solid #3b82f6;
     }
 
-    .team-role {
-        color: #58a6ff;
-        font-style: italic;
-        font-size: 0.95rem;
-        margin-bottom: 0.5rem;
+    .team-chip h6 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #1e293b;
     }
 
-    /* Adapt blue accents in Dark Mode */
-    html.dark-theme .team-avatar {
-        border-color: var(--primary-color);
+    .team-chip small {
+        color: #64748b;
+        font-size: 0.72rem;
     }
-    html.dark-theme .team-role {
-        color: var(--primary-color);
+
+    html.dark-theme .team-chip {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    html.dark-theme .team-chip:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: #60a5fa;
+    }
+
+    html.dark-theme .team-chip img {
+        border-color: #60a5fa;
+    }
+
+    html.dark-theme .team-chip h6 {
+        color: #f1f5f9;
+    }
+
+    html.dark-theme .team-chip small {
+        color: #94a3b8;
+    }
+
+    /* ==============================
+       RIGHT: LOGIN FORM (Glass)
+    ============================== */
+    .login-glass {
+        background: rgba(255, 255, 255, 0.55) !important;
+        backdrop-filter: blur(24px) saturate(1.6) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
+        border: 1px solid rgba(255, 255, 255, 0.5) !important;
+        border-radius: 24px !important;
+        padding: 3rem;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08);
+    }
+
+    .login-glass h2,
+    .login-glass h3 {
+        color: #0f172a !important;
+    }
+
+    .login-glass p {
+        color: #64748b !important;
+    }
+
+    .login-glass .form-label {
+        color: #334155 !important;
+        font-weight: 600;
+    }
+
+    .login-glass .input-group-text {
+        background: rgba(255, 255, 255, 0.6) !important;
+        border-color: #cbd5e1 !important;
+        color: #94a3b8 !important;
+        border-right: none !important;
+    }
+
+    .login-glass .form-control {
+        background: rgba(255, 255, 255, 0.6) !important;
+        border-color: #cbd5e1 !important;
+        color: #0f172a !important;
+        border-left: none !important;
+    }
+
+    .login-glass .form-control::placeholder {
+        color: #94a3b8 !important;
+    }
+
+    .login-glass .input-group:focus-within {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+        border-radius: 8px;
+    }
+
+    .login-glass .input-group:focus-within .input-group-text,
+    .login-glass .input-group:focus-within .form-control {
+        border-color: #3b82f6 !important;
+    }
+
+    .login-glass .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #6366f1) !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3) !important;
+        transition: all 0.25s ease !important;
+    }
+
+    .login-glass .btn-primary:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4) !important;
+    }
+
+    .login-glass .gavel-icon {
+        color: #3b82f6 !important;
+    }
+
+    .login-glass .copyright-link {
+        color: #94a3b8;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .login-glass .copyright-link:hover {
+        color: #3b82f6;
+        text-decoration: underline;
+    }
+
+    .login-glass .copyright-border {
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    /* Dark form overrides */
+    html.dark-theme .login-glass {
+        background: rgba(255, 255, 255, 0.06) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+    }
+
+    html.dark-theme .login-glass h2,
+    html.dark-theme .login-glass h3 {
+        color: #f8fafc !important;
+    }
+
+    html.dark-theme .login-glass p {
+        color: #94a3b8 !important;
+    }
+
+    html.dark-theme .login-glass .form-label {
+        color: #cbd5e1 !important;
+    }
+
+    html.dark-theme .login-glass .input-group-text {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #94a3b8 !important;
+    }
+
+    html.dark-theme .login-glass .form-control {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #f8fafc !important;
+    }
+
+    html.dark-theme .login-glass .form-control::placeholder {
+        color: #64748b !important;
+    }
+
+    html.dark-theme .login-glass .input-group:focus-within {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+    }
+
+    html.dark-theme .login-glass .input-group:focus-within .input-group-text,
+    html.dark-theme .login-glass .input-group:focus-within .form-control {
+        border-color: rgba(59, 130, 246, 0.5) !important;
+    }
+
+    html.dark-theme .login-glass .gavel-icon {
+        color: #60a5fa !important;
+    }
+
+    html.dark-theme .login-glass .copyright-link {
+        color: #64748b;
+    }
+
+    html.dark-theme .login-glass .copyright-link:hover {
+        color: #60a5fa;
+    }
+
+    html.dark-theme .login-glass .copyright-border {
+        border-top-color: rgba(255, 255, 255, 0.08);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row align-items-center split-layout fade-in-up">
-    
-    <!-- LEFT SIDE: Mission and Team -->
-    <div class="col-lg-7 d-none d-lg-block hero-section">
-        
-        <!-- Branding Logo 
-        <div class="text-center mb-2">
-            <i class="fa-solid fa-gavel text-primary" style="font-size: 3rem; text-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);"></i>
-        </div>
-        -->
 
-        <!-- Our Mission Section -->
-        <h3 class="fw-bold mb-3 text-center" style="color: var(--text-main); letter-spacing: -0.5px;">Our Mission</h3>
-        <p style="color: var(--text-muted); line-height: 1.7; font-size: 1.05rem; text-align: justify; margin-bottom: 3rem;">
-            Judgemenot is a tabulation system designed to promote transparency and fairness. It allows users to view scores and results in real time, ensuring that all participants can track updates instantly. Our platform is intuitive and user-friendly, providing a clear and accurate visualization of scores while maintaining integrity and reliability.
-        </p>
+<!-- CONTENT LAYER -->
+<div class="login-content-layer">
+    <div class="container-fluid">
+        <div class="row align-items-center justify-content-center g-4 px-lg-5">
 
-        <!-- Our Team Section -->
-        <h3 class="fw-bold mb-4 text-center" style="color: var(--text-main); letter-spacing: -0.5px;">Our Team</h3>
-        <div class="row g-3 justify-content-center">
-            
-            <!-- Team Member 1: Elmskie -->
-            <div class="col-md-4">
-                <div class="glass-panel text-center team-card h-100 shadow-sm">
-                    <!-- Replace the src with your actual image path, e.g., url_for('static', filename='img/elmskie.jpg') -->
-                    <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=200&h=200&fit=crop" alt="Elmskie" class="team-avatar">
-                    <h5 class="fw-bold mb-1" style="color: var(--text-main);">Elmskie</h5>
-                    <div class="team-role">Project Lead</div>
-                    <small class="text-muted fw-medium">BSCS 3A</small>
-                </div>
-            </div>
-
-            <!-- Team Member 2: Sijay -->
-            <div class="col-md-4">
-                <div class="glass-panel text-center team-card h-100 shadow-sm">
-                    <!-- Replace the src with your actual image path -->
-                    <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop" alt="Sijay" class="team-avatar">
-                    <h5 class="fw-bold mb-1" style="color: var(--text-main);">Sijay</h5>
-                    <div class="team-role">Developer</div>
-                    <small class="text-muted fw-medium">BSCS 3A</small>
-                </div>
-            </div>
-
-            <!-- Team Member 3: Rv -->
-            <div class="col-md-4">
-                <div class="glass-panel text-center team-card h-100 shadow-sm">
-                    <!-- Replace the src with your actual image path -->
-                    <img src="https://images.unsplash.com/photo-1517849845537-4d257902454a?w=200&h=200&fit=crop" alt="Rv" class="team-avatar">
-                    <h5 class="fw-bold mb-1" style="color: var(--text-main);">Rv</h5>
-                    <div class="team-role">Designer</div>
-                    <small class="text-muted fw-medium">BSCS 3A</small>
-                </div>
-            </div>
-            
-        </div>
-    </div>
-
-    <!-- RIGHT SIDE: Login Form -->
-    <div class="col-lg-5">
-        <div class="glass-panel login-panel shadow-lg">
-            
-            <!-- Mobile Fallback Branding (Only shows on small screens when left side is hidden) -->
-            <div class="text-center mb-4 d-lg-none">
-                <i class="fa-solid fa-gavel text-primary mb-2" style="font-size: 3rem;"></i>
-                <h2 class="fw-bold" style="color: var(--text-main); letter-spacing: -1px;">JudgeMeNot</h2>
-                <p class="text-muted">Sign in to your account</p>
-            </div>
-            
-            <!-- Desktop Form Header -->
-            <div class="text-center mb-4 d-none d-lg-block">
-                <i class="fa-solid fa-gavel text-primary mb-2" style="font-size: 2.5rem;"></i>
-                <h3 class="fw-bold mb-1" style="color: var(--text-main); letter-spacing: -0.5px;">JudgeMeNot</h3>
-                <p class="text-muted">System Authentication</p>
-            </div>
-
-            <form method="POST" action="{{ url_for('auth.login') }}">
-                <div class="mb-4">
-                    <label class="form-label" style="font-weight: 600;">Username</label>
-                    <div class="input-group shadow-sm" style="border-radius: 8px;">
-                        <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                        <input type="text" name="username" class="form-control" placeholder="Enter your username" required autofocus>
+            <!-- LEFT: About (Desktop) -->
+            <div class="col-lg-6 d-none d-lg-flex">
+                <div class="about-content">
+                    <div class="about-brand-row reveal reveal-d1">
+                        <div class="about-icon-box"><i class="fa-solid fa-gavel"></i></div>
+                        <div>
+                            <h2 class="gradient-text">JudgeMeNot</h2>
+                            <small>Tabulation System v2.0</small>
+                        </div>
+                    </div>
+                    <p class="about-mission reveal reveal-d2">
+                        JudgeMeNot is a tabulation system designed to promote transparency and fairness. It allows users
+                        to view scores and results in real time, ensuring that all participants can track updates
+                        instantly. Our platform is intuitive and user-friendly, providing a clear and accurate
+                        visualization of scores while maintaining integrity and reliability.
+                    </p>
+                    <div class="stat-row reveal reveal-d3">
+                        <div class="stat-item">
+                            <div class="stat-num" data-target="100">0</div>
+                            <div class="stat-label">Uptime %</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-num" data-target="3">0</div>
+                            <div class="stat-label">User Roles</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-num" data-target="2">0</div>
+                            <div class="stat-label">Event Types</div>
+                        </div>
+                    </div>
+                    <div class="feat-grid reveal reveal-d4">
+                        <div class="feat-card"><i class="fa-solid fa-bolt"></i><span>Real-time Scoring</span></div>
+                        <div class="feat-card"><i class="fa-solid fa-shield-halved"></i><span>Tamper-proof Ledger</span>
+                        </div>
+                        <div class="feat-card"><i class="fa-solid fa-ranking-star"></i><span>Live Leaderboards</span>
+                        </div>
+                        <div class="feat-card"><i class="fa-solid fa-users-gear"></i><span>Multi-role Access</span>
+                        </div>
+                    </div>
+                    <div class="reveal reveal-d5">
+                        <small class="team-label"><i class="fa-solid fa-people-group me-1"></i> The Team</small>
+                        <div class="login-team-row">
+                            <div class="team-chip">
+                                <img src="{{ url_for('static', filename='images/elmo.jpg') }}" alt="Elmskie">
+                                <div>
+                                    <h6>Elmskie</h6><small>BSCS 3A</small>
+                                </div>
+                            </div>
+                            <div class="team-chip">
+                                <img src="{{ url_for('static', filename='images/cj.png') }}" alt="Sijay">
+                                <div>
+                                    <h6>Sijay</h6><small>BSCS 3A</small>
+                                </div>
+                            </div>
+                            <div class="team-chip">
+                                <img src="{{ url_for('static', filename='images/arvs.jpg') }}" alt="Rv">
+                                <div>
+                                    <h6>Rv</h6><small>BSCS 3A</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="mb-5">
-                    <label class="form-label" style="font-weight: 600;">Password</label>
-                    <div class="input-group shadow-sm" style="border-radius: 8px;">
-                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
-                    </div>
+            </div>
+
+            <!-- RIGHT: Login Form -->
+            <div class="col-lg-5 col-md-8 col-11">
+            <div class="login-glass">
+                <div class="text-center mb-4 d-lg-none">
+                    <i class="fa-solid fa-gavel gavel-icon mb-2" style="font-size: 3rem;"></i>
+                    <h2 class="fw-bold" style="letter-spacing: -1px;">JudgeMeNot</h2>
+                    <p>Sign in to your account</p>
                 </div>
-                
-                <button type="submit" class="btn btn-primary w-100 py-3 fs-5 shadow" style="border-radius: 12px; font-weight: 700;">
-                    Secure Login <i class="fa-solid fa-arrow-right-to-bracket ms-2"></i>
-                </button>
-            </form>
-            
-            <div class="text-center mt-5 pt-4 text-muted" style="font-size: 0.85rem; border-top: 1px solid var(--panel-border);">
-                &copy; 2026 JudgeMeNot Tabulation System. All rights reserved.
+                <div class="text-center mb-4 d-none d-lg-block">
+                    <i class="fa-solid fa-gavel gavel-icon mb-2" style="font-size: 2.5rem;"></i>
+                    <h3 class="fw-bold mb-1" style="letter-spacing: -0.5px;">Welcome Back</h3>
+                    <p>Sign in to continue</p>
+                </div>
+                <form method="POST" action="{{ url_for('auth.login') }}">
+                    <div class="mb-4">
+                        <label class="form-label">Username</label>
+                        <div class="input-group shadow-sm" style="border-radius: 8px;">
+                            <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" name="username" class="form-control" placeholder="Enter your username"
+                                required autofocus>
+                        </div>
+                    </div>
+                    <div class="mb-5">
+                        <label class="form-label">Password</label>
+                        <div class="input-group shadow-sm" style="border-radius: 8px;">
+                            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" name="password" class="form-control"
+                                placeholder="Enter your password" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fs-5"
+                        style="border-radius: 12px; font-weight: 700;">
+                        Secure Login <i class="fa-solid fa-arrow-right-to-bracket ms-2"></i>
+                    </button>
+                </form>
+                <div class="text-center mt-5 pt-4 copyright-border" style="font-size: 0.85rem;">
+                    <a href="{{ url_for('auth.about') }}" class="copyright-link">&copy; 2026 JudgeMeNot Tabulation
+                        System. All rights reserved.</a>
+                </div>
             </div>
         </div>
+
     </div>
-    
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+
+        // Counter animation
+        document.querySelectorAll('.stat-num[data-target]').forEach(el => {
+            const t = +el.dataset.target; let c = 0; const inc = t / 40;
+            const timer = setInterval(() => { c += inc; if (c >= t) { c = t; clearInterval(timer); } el.textContent = Math.round(c); }, 30);
+        });
+    });
+</script>
 {% endblock %}

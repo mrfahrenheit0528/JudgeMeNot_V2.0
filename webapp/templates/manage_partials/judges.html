@@ -43,7 +43,7 @@
             <div class="item-actions">
                 <button type="button" class="btn-icon-raw text-secondary" title="Edit Settings" onclick="document.getElementById('editJudgeModal_{{ assignment.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
                 <form method="POST" action="{{ url_for('events.delete_judge', event_id=event.id, assignment_id=assignment.id) }}" style="display:inline;">
-                    <button type="submit" class="btn-icon-raw text-danger" title="Remove Judge" onclick="return confirm('Unassign this judge?')"><i class="fa-solid fa-trash"></i></button>
+                    <button type="button" class="btn-icon-raw text-danger" title="Remove Judge" onclick="event.preventDefault(); showStandardConfirm('Unassign this judge?', () => this.closest('form').submit());"><i class="fa-solid fa-trash"></i></button>
                 </form>
             </div>
             {% endif %}

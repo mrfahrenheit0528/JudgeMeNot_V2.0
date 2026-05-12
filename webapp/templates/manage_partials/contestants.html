@@ -54,7 +54,7 @@
                         {% if session.user.role == 'admin' %}
                         <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editContestantModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" style="display:inline;">
-                            <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove?')"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" class="btn-icon-raw text-danger" onclick="event.preventDefault(); showStandardConfirm('Remove?', () => this.closest('form').submit());"><i class="fa-solid fa-trash"></i></button>
                         </form>
                         {% endif %}
                     </div>
@@ -78,7 +78,7 @@
                         {% if session.user.role == 'admin' %}
                         <button type="button" class="btn-icon-raw text-secondary" onclick="document.getElementById('editContestantModal_{{ c.id }}').style.display='flex'"><i class="fa-solid fa-pen"></i></button>
                         <form method="POST" action="{{ url_for('events.delete_contestant', event_id=event.id, contestant_id=c.id) }}" style="display:inline;">
-                            <button type="submit" class="btn-icon-raw text-danger" onclick="return confirm('Remove?')"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" class="btn-icon-raw text-danger" onclick="event.preventDefault(); showStandardConfirm('Remove?', () => this.closest('form').submit());"><i class="fa-solid fa-trash"></i></button>
                         </form>
                         {% endif %}
                     </div>

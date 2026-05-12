@@ -13,6 +13,7 @@
     <!-- Global Themes CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/universe.css') }}">
     
     <!-- ADDED: Socket.io for Real-time Decentralized Sync -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -81,6 +82,13 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- FULL-PAGE ANIMATED BACKDROP (GLOBAL) -->
+    <div class="system-universe">
+        <div class="aurora aurora-1"></div>
+        <div class="aurora aurora-2"></div>
+        <div class="aurora aurora-3"></div>
+        <canvas id="particleCanvas"></canvas>
+    </div>
 
     <!-- Light/Dark Theme Navbar -->
     <nav class="navbar navbar-expand-lg sticky-top">
@@ -101,6 +109,19 @@
                                 </a>
                             </li>
                         {% endif %}
+                        {% if session['user']['role'] == 'tabulator' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('leaderboard.index') }}">
+                                    <i class="fas fa-trophy me-1"></i>Leaderboards
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('leaderboard.index') }}">
+                                <i class="fas fa-trophy me-1"></i>Leaderboards
+                            </a>
+                        </li>
                     {% endif %}
                 </ul>
                 <div class="d-flex align-items-center gap-3">
@@ -122,7 +143,9 @@
                             </ul>
                         </div>
                     {% else %}
+                        {% if request.endpoint != 'auth.login' %}
                         <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Login</a>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -180,8 +203,22 @@
         </div>
     </div>
 
-    <!-- Footer or extra spacing -->
-    <div class="mt-5 py-4"></div>
+    <!-- Standard Confirm Modal (Replaces Browser confirm()) -->
+    <div id="standardConfirmModal" class="admin-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 1060; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 14px; max-width: 450px; width: 100%; padding: 25px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); animation: fadeScaleUp 0.2s ease-out forwards;">
+            <h4 class="fw-bold mb-3 d-flex align-items-center" style="color: #0f172a;">
+                <i class="fa-solid fa-circle-question text-primary me-2"></i> Confirm Action
+            </h4>
+            <p id="standardConfirmMessage" class="text-muted mb-4" style="white-space: pre-wrap; font-size: 0.95rem;"></p>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary w-50 fw-bold" onclick="closeStandardConfirm()">Cancel</button>
+                <button type="button" id="standardConfirmBtn" class="btn btn-primary w-50 fw-bold">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer or extra spacing (Removed) -->
+
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -259,6 +296,27 @@
         document.getElementById('deactivateConfirmInput')?.addEventListener('keypress', function(e) {
             if(e.key === 'Enter') processDeactivate();
         });
+
+        // --- Standard Confirm Logic ---
+        let currentStandardConfirmAction = null;
+        
+        function showStandardConfirm(message, actionCallback) {
+            document.getElementById('standardConfirmMessage').innerText = message;
+            currentStandardConfirmAction = actionCallback;
+            document.getElementById('standardConfirmModal').style.display = 'flex';
+        }
+        
+        function closeStandardConfirm() {
+            document.getElementById('standardConfirmModal').style.display = 'none';
+            currentStandardConfirmAction = null;
+        }
+        
+        document.getElementById('standardConfirmBtn')?.addEventListener('click', function() {
+            if (currentStandardConfirmAction) {
+                currentStandardConfirmAction();
+            }
+            closeStandardConfirm();
+        });
     </script>
     
     <!-- Decentralized Node Logic (admin only) -->
@@ -267,5 +325,6 @@
     {% endif %}
     
     {% block extra_scripts %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/universe.js') }}"></script>
 </body>
 </html>

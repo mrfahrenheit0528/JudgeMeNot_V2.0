@@ -99,8 +99,14 @@ def login():
         
     return render_template('login.html')
 
+@auth_bp.route('/about')
+def about():
+    return render_template('about.html')
+
 @auth_bp.route('/logout')
 def logout():
+    if 'user' in session:
+        log_audit_action(session['user']['id'], "LOGOUT", f"User '{session['user'].get('username', 'Unknown')}' logged out.")
     session.clear()
     flash("You have been successfully logged out.", "success")
     return redirect(url_for('auth.login'))
