@@ -241,3 +241,28 @@ html.dark-theme .modal-backdrop .glass-panel {
     background-color: var(--panel-bg) !important;
     border-color: var(--panel-border) !important;
 }
+
+/* 10. Dashboard & Icon Specific Fixes */
+html.dark-theme .event-date,
+html.dark-theme .stat-icon.primary {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    color: var(--primary-color) !important;
+}
+
+html.dark-theme .stat-icon.success {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: var(--success) !important;
+}
+
+html.dark-theme .stat-icon.warning {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: var(--warning) !important;
+}
+
+html.dark-theme .event-item {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+html.dark-theme .event-item:hover {
+    background-color: rgba(255, 255, 255, 0.07) !important;
+}

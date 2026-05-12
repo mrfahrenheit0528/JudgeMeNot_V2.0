@@ -27,6 +27,11 @@
     --radius-lg: 20px;
 }
 
+/* Universal Theme Transition for Smooth Dark Mode Toggle */
+*, *::before, *::after {
+    transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-color);

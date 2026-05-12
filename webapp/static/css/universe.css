@@ -7,7 +7,20 @@
     z-index: -1;
     background: linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 40%, #e8ecf4 100%);
     overflow: hidden;
-    transition: background 0.5s ease;
+}
+
+.system-universe::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+}
+
+html.dark-theme .system-universe::before {
+    opacity: 1;
 }
 
 #particleCanvas {
@@ -25,6 +38,7 @@
     filter: blur(90px);
     opacity: 0.18;
     z-index: 0;
+    transition: background-color 0.4s ease, opacity 0.4s ease;
     animation: auroraPulse 5s ease-in-out infinite alternate;
 }
 
@@ -71,9 +85,6 @@
 }
 
 /* Aurora - Dark override */
-html.dark-theme .system-universe {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-}
 
 html.dark-theme .aurora-1 {
     background: #3b82f6;
