@@ -73,7 +73,8 @@ def append_to_ledger(db: Session, score_obj: Score):
     # This sends the block data to all connected browser "nodes"
     if emit:
         # Include integrity status so widgets know if chain is broken
-        is_valid, _, _ = verify_ledger_integrity(db)
+        # We only do the fast chain check here to prevent slowdowns on every score
+        is_valid, _, _ = verify_ledger_integrity(db, full_check=False)
         
         block_data = {
             "index": new_block.block_index,
@@ -90,7 +91,7 @@ def append_to_ledger(db: Session, score_obj: Score):
             # Prevent scoring failure if socket broadcast fails
             pass
 
-def verify_ledger_integrity(db: Session):
+def verify_ledger_integrity(db: Session, full_check: bool = True):
     """
     Two-layer verification:
     1. CHAIN CHECK: Walks the chain to verify hash links are intact.
@@ -115,7 +116,10 @@ def verify_ledger_integrity(db: Session):
             
         expected_prev_hash = block.current_hash
     
-    # Layer 2: Cross-reference latest ledger entries against actual DB scores
+    if not full_check:
+        return True, "Chain integrity verified (fast check).", []
+    
+    # Layer 2: Cross-reference ALL latest ledger entries against actual DB scores
     # Build a map of score_id -> latest snapshot (highest block_index wins)
     latest_snapshots = {}
     for block in blocks:
