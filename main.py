@@ -1,5 +1,10 @@
 import os
 from flask import Flask, render_template, session, redirect, url_for
+from flask_socketio import SocketIO, emit
+import socket
+
+# Initialize SocketIO
+socketio = SocketIO(cors_allowed_origins="*")
 
 def create_app(test_config=None):
     # Create and configure the app
@@ -50,6 +55,9 @@ def create_app(test_config=None):
     # =========================================================
     Base.metadata.create_all(bind=engine)
     
+    # Attach SocketIO to the Flask app
+    socketio.init_app(app)
+    
     @app.route('/')
     @require_role()
     def index():
@@ -97,8 +105,83 @@ def create_app(test_config=None):
         finally:
             db.close()
 
+    # =========================================================
+    # SOCKETIO EVENT HANDLERS
+    # =========================================================
+    @socketio.on('request_ledger_state')
+    def handle_ledger_state_request():
+        """Sends the current ledger state to the requesting client."""
+        from webapp.python.models import ScoreLedger
+        from webapp.python.services import verify_ledger_integrity
+        db = SessionLocal()
+        try:
+            last_block = db.query(ScoreLedger).order_by(
+                ScoreLedger.block_index.desc()
+            ).first()
+            
+            block_count = 0
+            last_hash = None
+            prev_hash = None
+            
+            if last_block:
+                block_count = last_block.block_index
+                last_hash   = last_block.current_hash
+                prev_hash   = last_block.previous_hash
+            
+            is_valid, _, _ = verify_ledger_integrity(db)
+            
+            emit('ledger_state', {
+                'block_count': block_count,
+                'last_hash': last_hash,
+                'prev_hash': prev_hash,
+                'integrity': is_valid
+            })
+        finally:
+            db.close()
+
+    # =========================================================
+    # CONTROL PANEL REDIRECT
+    # =========================================================
+    @app.route('/control-panel')
+    def admin_control_panel():
+        from webapp.python.auth import require_role as _rr
+        user = session.get('user')
+        if not user or user.get('role') != 'admin':
+            return redirect(url_for('index'))
+        
+        db = SessionLocal()
+        try:
+            from webapp.python.models import Event
+            latest_event = db.query(Event).order_by(Event.id.desc()).first()
+            if latest_event:
+                return redirect(url_for('events.manage', event_id=latest_event.id))
+            else:
+                flash('No events found. Create one first.', 'warning')
+                return redirect(url_for('index'))
+        finally:
+            db.close()
+
     return app
 
+def get_local_ip():
+    try:
+        # Connect to a public DNS to find the correct outgoing IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
 if __name__ == '__main__':
+    host_ip = get_local_ip()
+    port = 5000
+    
+    print(f" \n --- SERVER STARTED ---")
+    print(f" * Local:    http://127.0.0.1:{port}")
+    print(f" * Network:  http://{host_ip}:{port}")
+    print(f" ----------------------\n")
+
     app = create_app()
-    app.run(debug=True, port=5000)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)

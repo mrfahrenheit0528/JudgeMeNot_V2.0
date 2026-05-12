@@ -75,6 +75,7 @@ def pb_scoring(event_id, segment_id):
             return redirect(url_for('index'))
 
         if request.method == 'POST':
+            from webapp.python.services import append_to_ledger
             for q_num in range(1, segment.total_questions + 1):
                 answer_status = request.form.get(f'question_{q_num}')
                 if answer_status:
@@ -83,20 +84,28 @@ def pb_scoring(event_id, segment_id):
                         contestant_id=contestant.id, segment_id=segment.id, question_number=q_num).first()
                     
                     if existing_score:
-                        existing_score.is_correct = is_correct_val
-                        existing_score.judge_id = user['id']
+                        # Only record to ledger if the answer actually changed
+                        if existing_score.is_correct != is_correct_val:
+                            existing_score.is_correct = is_correct_val
+                            existing_score.score_value = 1.0 if is_correct_val else 0.0
+                            existing_score.judge_id = user['id']
+                            db.flush()
+                            append_to_ledger(db, existing_score)
                     else:
                         new_score = Score(
                             contestant_id=contestant.id, 
                             segment_id=segment.id, 
                             judge_id=user['id'],
                             question_number=q_num, 
-                            is_correct=is_correct_val
+                            is_correct=is_correct_val,
+                            score_value=1.0 if is_correct_val else 0.0
                         )
                         db.add(new_score)
+                        db.flush()
+                        append_to_ledger(db, new_score)
             
             db.commit()
-            flash('Scores saved successfully!', 'success')
+            flash('Scores saved and broadcast to ledger!', 'success')
             return redirect(url_for('judge.pb_scoring', event_id=event_id, segment_id=segment_id))
 
         existing_scores = db.query(Score).filter_by(contestant_id=contestant.id, segment_id=segment.id).all()

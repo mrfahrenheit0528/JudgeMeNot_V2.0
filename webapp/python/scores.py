@@ -2,6 +2,7 @@ import io
 from flask import Blueprint, render_template, flash, redirect, url_for, Response, send_file
 from webapp.python.database import SessionLocal
 from webapp.python.models import Event, Contestant, Score, JudgeProgress, Segment
+from sqlalchemy import func
 from webapp.python.auth import require_role
 from webapp.python.services import get_live_leaderboard
 
@@ -32,8 +33,22 @@ def detail(event_id):
             flash("Event not found.", "error")
             return redirect(url_for('scores.index'))
             
-        overall_leaderboard = get_live_leaderboard(db, event_id)
+        raw_leaderboard = get_live_leaderboard(db, event_id)
         all_scores = db.query(Score).join(Contestant).filter(Contestant.event_id == event_id).all()
+        
+        # Enrich leaderboard: template expects row.contestant (model object) and row.score
+        contestant_map = {c.id: c for c in event.contestants}
+        overall_leaderboard = []
+        for r in raw_leaderboard:
+            contestant_obj = contestant_map.get(r['id'])
+            if contestant_obj:
+                class LBRow:
+                    pass
+                row = LBRow()
+                row.contestant = contestant_obj
+                row.score = r['total_score']
+                row.rank = r.get('rank', 0)
+                overall_leaderboard.append(row)
         
         matrix = {}
         for seg in event.segments:
@@ -57,8 +72,8 @@ def detail(event_id):
 
         stats = {}
         if event.event_type == 'Score-Based':
-            valid_lb = [r for r in overall_leaderboard if r['score'] > 0]
-            valid_lb.sort(key=lambda x: x['score'], reverse=True)
+            valid_lb = [r for r in overall_leaderboard if r.score > 0]
+            valid_lb.sort(key=lambda x: x.score, reverse=True)
             stats['top_scorer'] = valid_lb[0] if valid_lb else None
             stats['lowest_scorer'] = valid_lb[-1] if valid_lb else None
 

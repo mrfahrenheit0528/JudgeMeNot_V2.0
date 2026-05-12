@@ -1,6 +1,8 @@
 import datetime
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean, Text, UniqueConstraint
 from sqlalchemy.orm import relationship, declarative_base
+import hashlib
+import json
 
 Base = declarative_base()
 
@@ -179,3 +181,31 @@ class EventJudge(Base):
     
     event = relationship("Event", back_populates="assigned_judges")
     judge = relationship("User")
+
+class ScoreLedger(Base):
+    __tablename__ = 'score_ledger'
+    
+    id = Column(Integer, primary_key=True)
+    # Metadata
+    block_index = Column(Integer, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.now)
+    
+    # Data Reference (What we are protecting)
+    score_id = Column(Integer, ForeignKey('scores.id'), nullable=True)
+    data_snapshot = Column(Text, nullable=False) # JSON string of the score details
+    
+    # The Cryptographic Links
+    previous_hash = Column(String(64), nullable=False)
+    current_hash = Column(String(64), nullable=False)
+
+    def generate_hash(self):
+        """Creates a SHA-256 hash of the block's content."""
+        block_content = {
+            "index": self.block_index,
+            "timestamp": str(self.timestamp),
+            "data": self.data_snapshot,
+            "prev_hash": self.previous_hash
+        }
+        # sort_keys=True ensures the JSON string is always the same for the same data
+        block_string = json.dumps(block_content, sort_keys=True).encode()
+        return hashlib.sha256(block_string).hexdigest()

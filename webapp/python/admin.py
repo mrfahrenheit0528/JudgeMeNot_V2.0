@@ -135,7 +135,7 @@ def logs():
         db.close()
 
 @admin_bp.route('/settings')
-@require_role(['admin', 'admin-viewer'])
+@require_role(['admin', 'admin-viewer', 'judge', 'tabulator'])
 def settings():
     import io
     import base64
@@ -175,3 +175,63 @@ def settings():
         flash("Please install 'qrcode' and 'Pillow' packages to view the connection QR code.", "error")
 
     return render_template('admin_settings.html', qr_code=img_str, url=url)
+
+@admin_bp.route('/ledger')
+@require_role(['admin', 'admin-viewer', 'judge', 'tabulator'])
+def ledger_explorer():
+    """Full-page ledger blockchain explorer with visualization."""
+    from webapp.python.models import ScoreLedger, Score, Contestant, User, Segment
+    from webapp.python.services import verify_ledger_integrity
+    import json
+    
+    db = SessionLocal()
+    try:
+        blocks = db.query(ScoreLedger).order_by(ScoreLedger.block_index.desc()).all()
+        is_valid, integrity_msg, compromised_block = verify_ledger_integrity(db)
+        
+        # Enrich blocks with readable data
+        enriched_blocks = []
+        for block in blocks:
+            data = json.loads(block.data_snapshot) if block.data_snapshot else {}
+            
+            # Resolve names
+            contestant_name = None
+            judge_name = None
+            segment_name = None
+            criteria_name = None
+            
+            if data.get('contestant_id'):
+                c = db.query(Contestant).filter(Contestant.id == data['contestant_id']).first()
+                contestant_name = c.name if c else f"ID#{data['contestant_id']}"
+            if data.get('judge_id'):
+                j = db.query(User).filter(User.id == data['judge_id']).first()
+                judge_name = (j.name or j.username) if j else f"ID#{data['judge_id']}"
+            if data.get('segment_id'):
+                s = db.query(Segment).filter(Segment.id == data['segment_id']).first()
+                segment_name = s.name if s else f"ID#{data['segment_id']}"
+            if data.get('criteria_id'):
+                from webapp.python.models import Criteria
+                cr = db.query(Criteria).filter(Criteria.id == data['criteria_id']).first()
+                criteria_name = cr.name if cr else f"ID#{data['criteria_id']}"
+            
+            # Determine block type: pageant has criteria_id, quiz bee does not
+            block_type = 'pageant' if data.get('criteria_id') else 'quizbee'
+            
+            enriched_blocks.append({
+                'block': block,
+                'data': data,
+                'contestant_name': contestant_name,
+                'judge_name': judge_name,
+                'segment_name': segment_name,
+                'criteria_name': criteria_name,
+                'block_type': block_type,
+            })
+        
+        return render_template('ledger_explorer.html',
+                               blocks=enriched_blocks,
+                               total_blocks=len(blocks),
+                               is_valid=is_valid,
+                               integrity_msg=integrity_msg,
+                               compromised_block=compromised_block)
+    finally:
+        db.close()

@@ -1,147 +1,308 @@
+import json
+import hashlib
+from datetime import datetime
 from sqlalchemy.orm import Session
-from webapp.python.models import Event, Score, Contestant, Criteria, JudgeProgress, Score
+from sqlalchemy import func
+from webapp.python.models import (
+    Event, Contestant, Score, Criteria, 
+    Segment, AuditLog, ScoreLedger, EventJudge
+)
+
+# SocketIO import for broadcasting
+try:
+    from flask_socketio import emit
+except ImportError:
+    emit = None
+
+# =========================================================
+# LEDGER & DECENTRALIZATION UTILITIES
+# =========================================================
+
+def append_to_ledger(db: Session, score_obj: Score):
+    """
+    Creates a new immutable block in the ScoreLedger table and 
+    broadcasts it to all connected devices to ensure decentralization.
+    """
+    # 1. Retrieve the latest block for chaining
+    last_block = db.query(ScoreLedger).order_by(ScoreLedger.block_index.desc()).first()
+    
+    prev_hash = "0" * 64  # Genesis fallback
+    next_index = 1
+    
+    if last_block:
+        prev_hash = last_block.current_hash
+        next_index = last_block.block_index + 1
+
+    # 2. Prepare the data snapshot
+    data_payload = {
+        "score_id": score_obj.id,
+        "contestant_id": score_obj.contestant_id,
+        "judge_id": score_obj.judge_id,
+        "segment_id": score_obj.segment_id,
+        "criteria_id": getattr(score_obj, 'criteria_id', None),
+        "score_value": float(score_obj.score_value) if score_obj.score_value else 0.0,
+        "is_correct": score_obj.is_correct,
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    data_str = json.dumps(data_payload, sort_keys=True)
+
+    # 3. Instantiate the ledger entry
+    # IMPORTANT: Set timestamp explicitly so generate_hash() uses the
+    # same value that will be persisted. Relying on the column default
+    # leaves self.timestamp as None at hash-generation time, which
+    # causes verify_ledger_integrity() to fail later.
+    block_timestamp = datetime.now().replace(microsecond=0)
+    
+    new_block = ScoreLedger(
+        block_index=next_index,
+        score_id=score_obj.id,
+        data_snapshot=data_str,
+        previous_hash=prev_hash,
+        timestamp=block_timestamp
+    )
+    
+    # Generate hash using the model's method
+    new_block.current_hash = new_block.generate_hash()
+    
+    db.add(new_block)
+    # Flush ensures the block is ready but not yet final in case the broadcast logic fails
+    db.flush()
+
+    # 4. BROADCAST: True Decentralization
+    # This sends the block data to all connected browser "nodes"
+    if emit:
+        # Include integrity status so widgets know if chain is broken
+        is_valid, _, _ = verify_ledger_integrity(db)
+        
+        block_data = {
+            "index": new_block.block_index,
+            "prev_hash": new_block.previous_hash,
+            "curr_hash": new_block.current_hash,
+            "data": data_str,
+            "timestamp": str(new_block.timestamp),
+            "integrity": is_valid
+        }
+        # namespace='/' ensures global broadcast
+        try:
+            emit('new_ledger_block', block_data, namespace='/', broadcast=True)
+        except Exception:
+            # Prevent scoring failure if socket broadcast fails
+            pass
+
+def verify_ledger_integrity(db: Session):
+    """
+    Two-layer verification:
+    1. CHAIN CHECK: Walks the chain to verify hash links are intact.
+    2. DATA CHECK: Cross-references the latest ledger snapshot for each
+       score against the actual Score table to detect direct DB tampering.
+    
+    Returns: (is_valid, message, list_of_compromised_block_indices)
+    """
+    import json
+    
+    blocks = db.query(ScoreLedger).order_by(ScoreLedger.block_index.asc()).all()
+    expected_prev_hash = "0" * 64
+    
+    # Layer 1: Chain integrity
+    for block in blocks:
+        if block.previous_hash != expected_prev_hash:
+            return False, f"Chain broken at block {block.block_index}: Previous hash mismatch.", [block.block_index]
+            
+        recalculated_hash = block.generate_hash()
+        if block.current_hash != recalculated_hash:
+            return False, f"Chain broken at block {block.block_index}: Block data tampered.", [block.block_index]
+            
+        expected_prev_hash = block.current_hash
+    
+    # Layer 2: Cross-reference latest ledger entries against actual DB scores
+    # Build a map of score_id -> latest snapshot (highest block_index wins)
+    latest_snapshots = {}
+    for block in blocks:
+        if block.score_id:
+            try:
+                data = json.loads(block.data_snapshot)
+                latest_snapshots[block.score_id] = {
+                    'block_index': block.block_index,
+                    'score_value': data.get('score_value'),
+                    'is_correct': data.get('is_correct'),
+                }
+            except (json.JSONDecodeError, AttributeError):
+                pass
+    
+    # Collect ALL tampered blocks instead of returning on the first one
+    compromised_blocks = []
+    tamper_details = []
+    
+    for score_id, snapshot in latest_snapshots.items():
+        actual_score = db.query(Score).filter(Score.id == score_id).first()
+        if not actual_score:
+            continue
+        
+        # Check score_value
+        ledger_val = float(snapshot['score_value']) if snapshot['score_value'] is not None else None
+        actual_val = float(actual_score.score_value) if actual_score.score_value is not None else None
+        
+        if ledger_val is not None and actual_val is not None:
+            if round(ledger_val, 4) != round(actual_val, 4):
+                compromised_blocks.append(snapshot['block_index'])
+                tamper_details.append(
+                    f"Block #{snapshot['block_index']}: Score ID {score_id} "
+                    f"was {ledger_val} \u2192 now {actual_val}"
+                )
+        
+        # Check is_correct (for quiz bee)
+        if snapshot['is_correct'] is not None:
+            if actual_score.is_correct != snapshot['is_correct']:
+                compromised_blocks.append(snapshot['block_index'])
+                tamper_details.append(
+                    f"Block #{snapshot['block_index']}: Score ID {score_id} answer "
+                    f"was {'correct' if snapshot['is_correct'] else 'wrong'} \u2192 "
+                    f"now {'correct' if actual_score.is_correct else 'wrong'}"
+                )
+    
+    if compromised_blocks:
+        msg = f"Score tampering detected in {len(compromised_blocks)} block(s)! " + " | ".join(tamper_details)
+        return False, msg, compromised_blocks
+    
+    return True, "Ledger integrity verified. All blocks and scores match.", []
+
+# =========================================================
+# CORE SCORING SERVICES
+# =========================================================
 
 def submit_pageant_score(db: Session, judge_id: int, contestant_id: int, criteria_id: int, score_value: float):
-    score = db.query(Score).filter_by(
-        judge_id=judge_id, contestant_id=contestant_id, criteria_id=criteria_id
-    ).first()
-    
-    crit = db.query(Criteria).filter_by(id=criteria_id).first()
-    if not crit:
-        return False, "Criteria not found"
+    try:
+        score = db.query(Score).filter_by(
+            judge_id=judge_id, 
+            contestant_id=contestant_id, 
+            criteria_id=criteria_id
+        ).first()
         
-    if score:
-        score.score_value = score_value
-    else:
-        score = Score(
-            contestant_id=contestant_id,
-            judge_id=judge_id,
-            criteria_id=criteria_id,
-            segment_id=crit.segment_id,
-            score_value=score_value
-        )
-        db.add(score)
-    db.commit()
-    return True, "Score saved"
+        crit = db.query(Criteria).filter_by(id=criteria_id).first()
+        if not crit:
+            return False, "Criteria not found"
+            
+        if score:
+            score.score_value = score_value
+        else:
+            score = Score(
+                contestant_id=contestant_id,
+                judge_id=judge_id,
+                criteria_id=criteria_id,
+                segment_id=crit.segment_id,
+                score_value=score_value
+            )
+            db.add(score)
+        
+        # CRITICAL: Flush to generate score.id for ledger snapshot
+        db.flush()
+        
+        # Record and Broadcast
+        append_to_ledger(db, score)
+        
+        db.commit()
+        return True, "Score saved and broadcast to ledger."
+    except Exception as e:
+        db.rollback()
+        return False, f"Error: {str(e)}"
 
+def submit_quizbee_score(db: Session, judge_id: int, contestant_id: int, question_num: int, is_correct: bool, segment_id: int):
+    try:
+        score = db.query(Score).filter_by(
+            judge_id=judge_id,
+            contestant_id=contestant_id,
+            question_number=question_num,
+            segment_id=segment_id
+        ).first()
+
+        if score:
+            score.is_correct = is_correct
+            score.score_value = 1.0 if is_correct else 0.0
+        else:
+            score = Score(
+                judge_id=judge_id,
+                contestant_id=contestant_id,
+                question_number=question_num,
+                segment_id=segment_id,
+                is_correct=is_correct,
+                score_value=1.0 if is_correct else 0.0
+            )
+            db.add(score)
+
+        db.flush()
+        append_to_ledger(db, score)
+        db.commit()
+        return True, "Point recorded and broadcast to ledger."
+    except Exception as e:
+        db.rollback()
+        return False, str(e)
+
+# =========================================================
+# LIVE TABULATION & RANKING
+# =========================================================
 
 def get_live_leaderboard(db: Session, event_id: int):
-    """
-    Universal fallback generator used by PDF Exporters and basic tables.
-    Returns a unified leaderboard accurately calculating weights.
-    """
-    event = db.query(Event).filter(Event.id == event_id).first()
-    all_scores = db.query(Score).join(Contestant).filter(Contestant.event_id == event_id).all()
-    
-    results = []
-    final_started = False
-    final_seg = next((s for s in event.segments if s.is_final), None)
-    
-    if final_seg:
-        if final_seg.is_active or any(s.segment_id == final_seg.id and s.score_value is not None for s in all_scores):
-            final_started = True
+    event = db.query(Event).get(event_id)
+    if not event:
+        return []
+    return calculate_rankings(db, event_id)
 
-    for contestant in event.contestants:
-        prelim_score = 0.0
-        final_score = 0.0
-        
-        for segment in event.segments:
-            if not segment.is_contestant_allowed(contestant.id):
-                continue
-                
-            if event.event_type == 'Point-Based':
-                pts = sum([segment.points_per_question for s in all_scores if s.contestant_id == contestant.id and s.segment_id == segment.id and s.is_correct])
-                if segment.is_final or 'Clincher' in segment.name or 'Tie Breaker' in segment.name:
-                    final_score += pts
-                else:
-                    prelim_score += pts
-            else:
-                # THE FIX: Applying Criteria Weights properly in the Fallback engine
-                crit_weights = {crit.id: (crit.weight / 100.0 if crit.weight > 1.0 else crit.weight) for crit in segment.criteria}
-                
-                seg_scores_arr = []
-                for j in event.assigned_judges:
-                    j_score = 0.0
-                    has_scores = False
-                    for s in all_scores:
-                        if s.contestant_id == contestant.id and s.segment_id == segment.id and s.judge_id == j.judge_id and s.score_value is not None:
-                            cw = crit_weights.get(s.criteria_id, 1.0)
-                            j_score += s.score_value * cw
-                            has_scores = True
-                            
-                    if has_scores:
-                        seg_scores_arr.append(j_score)
-                        
-                avg_seg = sum(seg_scores_arr) / len(seg_scores_arr) if seg_scores_arr else 0.0
-                
-                w_seg = segment.percentage_weight or 0.0
-                if w_seg > 1.0: w_seg = w_seg / 100.0
-                
-                pts = avg_seg * w_seg if w_seg > 0 else avg_seg
-                
-                if segment.is_final or 'Clincher' in segment.name or 'Tie Breaker' in segment.name:
-                    final_score += pts
-                else:
-                    prelim_score += pts
-                    
-        # Add contestant calculation to payload
+def calculate_rankings(db: Session, event_id: int):
+    event = db.query(Event).get(event_id)
+    contestants = db.query(Contestant).filter(Contestant.event_id == event_id, Contestant.status == 'Active').all()
+    results = []
+
+    for c in contestants:
+        total_score = 0
+        if event.event_type == 'PAGEANT':
+            scores = db.query(Score).filter(Score.contestant_id == c.id).all()
+            for s in scores:
+                if s.criteria:
+                    total_score += (s.score_value * (s.criteria.weight / 100))
+        else:
+            total_score = db.query(func.sum(Score.score_value)).filter(Score.contestant_id == c.id).scalar() or 0
+
         results.append({
-            "contestant": contestant,
-            "score": final_score if final_started else prelim_score,
-            "prelim_score": prelim_score,
-            "final_score": final_score
+            'id': c.id,
+            'name': c.name,
+            'number': c.candidate_number,
+            'total_score': round(total_score, 2)
         })
 
-    # Descending standard sort
-    results.sort(key=lambda x: x["final_score"] if final_started else x["prelim_score"], reverse=True)
-    
-    # Define simple rank
-    rank = 1
-    for r in results:
-        r["rank"] = rank
-        rank += 1
-        
+    results.sort(key=lambda x: x['total_score'], reverse=True)
+    for i, res in enumerate(results):
+        res['rank'] = i + 1
     return results
 
-def calculate_dashboard_progress(db, active_events, recent_events):
-    """Calculates global and per-event progress percentages for the dashboard."""
-    # --- 1. GLOBAL SCORES SUBMITTED (Active Events Only) ---
-    global_expected = 0
-    global_actual = 0
-    
-    for event in active_events:
-        if event.event_type == 'Score-Based':
-            judges_count = len(event.assigned_judges)
-            for seg in event.segments:
-                global_expected += judges_count
-                global_actual += db.query(JudgeProgress).filter(JudgeProgress.segment_id == seg.id, JudgeProgress.is_submitted == True).count()
-        else: # Point-Based
-            contestant_count = len(event.contestants)
-            for seg in event.segments:
-                qs = seg.total_questions or 0
-                global_expected += contestant_count * qs
-                global_actual += db.query(Score).filter(Score.segment_id == seg.id).count()
-                
-    global_progress_pct = int((global_actual / global_expected) * 100) if global_expected > 0 else 0
-    
-    # --- 2. INDIVIDUAL EVENT PROGRESS (For the Progress Bars) ---
+# =========================================================
+# ADMIN DASHBOARD CALCULATIONS
+# =========================================================
+
+def calculate_dashboard_progress(db: Session, active_events, recent_events):
     event_progress = {}
-    for event in recent_events:
-        expected = 0
-        actual = 0
+    total_actual = 0
+    total_expected = 0
+    unique_events = {e.id: e for e in (active_events + recent_events)}.values()
+
+    for event in unique_events:
+        judge_count = db.query(EventJudge).filter(EventJudge.event_id == event.id).count()
+        contestant_count = db.query(Contestant).filter(Contestant.event_id == event.id, Contestant.status == 'Active').count()
         
-        if event.event_type == 'Score-Based':
-            judges_count = len(event.assigned_judges)
-            for seg in event.segments:
-                expected += judges_count
-                actual += db.query(JudgeProgress).filter(JudgeProgress.segment_id == seg.id, JudgeProgress.is_submitted == True).count()
+        if event.event_type == 'PAGEANT':
+            criteria_count = db.query(Criteria).join(Segment).filter(Segment.event_id == event.id).count()
+            expected = judge_count * contestant_count * criteria_count
         else:
-            contestant_count = len(event.contestants)
-            for seg in event.segments:
-                qs = seg.total_questions or 0
-                expected += contestant_count * qs
-                actual += db.query(Score).filter(Score.segment_id == seg.id).count()
+            seg = db.query(Segment).filter(Segment.event_id == event.id).first()
+            total_q = seg.total_questions if seg else 0
+            expected = judge_count * contestant_count * total_q
+
+        actual = db.query(Score).join(Contestant).filter(Contestant.event_id == event.id).count()
+        pct = (actual / expected * 100) if expected > 0 else 0
+        event_progress[event.id] = round(min(pct, 100), 1)
         
-        event_progress[event.id] = int((actual / expected) * 100) if expected > 0 else 0
-        
-    return global_progress_pct, event_progress
+        total_actual += actual
+        total_expected += expected
+
+    global_pct = (total_actual / total_expected * 100) if total_expected > 0 else 0
+    return round(global_pct, 1), event_progress
