@@ -16,7 +16,10 @@ except ImportError:
 
 # =========================================================
 # LEDGER & DECENTRALIZATION UTILITIES
-# =========================================================
+import threading
+
+# Global lock to prevent blockchain forks during concurrent score submissions
+ledger_lock = threading.Lock()
 
 def append_to_ledger(db: Session, score_obj: Score):
     """
@@ -199,13 +202,13 @@ def submit_pageant_score(db: Session, judge_id: int, contestant_id: int, criteri
             )
             db.add(score)
         
-        # CRITICAL: Flush to generate score.id for ledger snapshot
-        db.flush()
-        
-        # Record and Broadcast
-        append_to_ledger(db, score)
-        
-        db.commit()
+        # Record and Broadcast securely with a lock
+        with ledger_lock:
+            # CRITICAL: Flush to generate score.id for ledger snapshot
+            db.flush()
+            append_to_ledger(db, score)
+            db.commit()
+            
         return True, "Score saved and broadcast to ledger."
     except Exception as e:
         db.rollback()
@@ -234,9 +237,11 @@ def submit_quizbee_score(db: Session, judge_id: int, contestant_id: int, questio
             )
             db.add(score)
 
-        db.flush()
-        append_to_ledger(db, score)
-        db.commit()
+        with ledger_lock:
+            db.flush()
+            append_to_ledger(db, score)
+            db.commit()
+            
         return True, "Point recorded and broadcast to ledger."
     except Exception as e:
         db.rollback()

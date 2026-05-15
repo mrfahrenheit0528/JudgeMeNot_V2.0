@@ -60,10 +60,10 @@ def check_tie_breakers(db_session, event_id: int):
         Segment.is_active == True
     ).first()
     
-    if not active_segment or active_segment.qualifier_limit <= 0:
+    if not active_segment or active_segment.qualifying_count <= 0:
         return [] # No cutoffs defined for this round
         
-    cutoff = active_segment.qualifier_limit
+    cutoff = active_segment.qualifying_count
     
     # If we have less candidates than the cutoff, everyone just passes
     if len(leaderboard) <= cutoff:
